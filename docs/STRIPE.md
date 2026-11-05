@@ -12,3 +12,5 @@ All objects carry `metadata.app=inboxwire`; lookup keys are prefixed `inboxwire_
 
 Notes: Developer (free) has no Stripe object. The extra-mailbox price is licensed (quantity set by the app from the overage count, prorated daily by Stripe); a metered variant can replace it later. GBP/CAD price points are not in the workbook and are not created.
 Webhook endpoint and `STRIPE_WEBHOOK_SECRET` are created after the first deploy. Customer Portal must be enabled once: https://dashboard.stripe.com/test/settings/billing/portal
+
+Webhook endpoint `we_1UYJcCBkP5VKCzMY7DDRddw9` -> https://inboxwire.vercel.app/api/stripe/webhook (8 events). Its signing secret is stored only in Vercel env `STRIPE_WEBHOOK_SECRET`. `STRIPE_SECRET_KEY` is not set yet (checkout answers 503 billing_unavailable) until STRIPE_SECRET_KEY_TEST arrives.
