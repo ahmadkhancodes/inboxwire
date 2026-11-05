@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertLink, lookupConnectLink } from "@/lib/connect/links";
 import { buildAuthUrl, newOAuthState, pkcePair, redirectUri } from "@/lib/connect/oauth";
+import { ensureCapacity } from "@/lib/connect/complete";
 import { getDb } from "@/lib/db";
 import type { OAuthProvider } from "@/lib/db/types";
 import { appUrl } from "@/lib/env";
@@ -20,6 +21,7 @@ export const GET = withApi(async (req, { params }: { params: Promise<{ token: st
   const { state, stateHash } = await newOAuthState();
   const { verifier, challenge } = await pkcePair();
   const email = new URL(req.url).searchParams.get("email") ?? link.email ?? null;
+  await ensureCapacity(db, link.envId, email);
   await db.setConnectLinkOAuth(link.id, { stateHash, verifier, provider: provider as OAuthProvider, email });
   return NextResponse.redirect(buildAuthUrl(provider as OAuthProvider, { clientId: client.clientId, redirectUri: redirectUri(appUrl(), provider as OAuthProvider), state, challenge, loginHint: email }));
 }, { csrf: false });

@@ -4,7 +4,7 @@ import { appUrl } from "@/lib/env";
 import type { Scope } from "@/lib/auth/scopes";
 import { EVENT_TYPES } from "@/lib/webhooks/outbound";
 import {
-  AccountSchema, AttachmentSchema, BulkReplayBody, ConnectLinkBody, ConnectLinkSchema, DeliveryListQuery, DeliverySchema, ErrorSchema, FolderSchema,
+  AccountSchema, AttachmentSchema, DeletionSchema, UsageSchema, BulkReplayBody, ConnectLinkBody, ConnectLinkSchema, DeliveryListQuery, DeliverySchema, ErrorSchema, FolderSchema,
   MessageListQuery, MessagePageSchema, MessageSummarySchema, OutboxSchema, SendBodySchema, WebhookCreateBody, WebhookEndpointSchema, WebhookPatchBody,
 } from "@/lib/v1/schemas";
 
@@ -24,6 +24,8 @@ const ID = { pathParams: ["id"] };
 export const operations: Operation[] = [
   { id: "listAccounts", method: "get", path: "/accounts", tag: "Accounts", summary: "List accounts", description: "Mailboxes connected in the key's environment.", scope: "read", response: list(AccountSchema) },
   { id: "getAccount", method: "get", path: "/accounts/{id}", tag: "Accounts", summary: "Get an account", description: "State of one mailbox, including the last error and whether it runs on push or polling.", scope: "read", ...ID, response: AccountSchema, errors: [404] },
+  { id: "deleteAccount", method: "delete", path: "/accounts/{id}", tag: "Accounts", summary: "Delete an account", description: "Stops the provider watch, revokes the token where the provider supports it (Google), deletes the account, its credentials, cursors and queued sends, and writes a `deletion_record` (the address is kept only as a sha256). Needs the admin scope. Message content is never stored, so there is nothing else to remove.", scope: "admin", ...ID, response: DeletionSchema, errors: [404] },
+  { id: "getUsage", method: "get", path: "/usage", tag: "Accounts", summary: "Get usage", description: "Active mailboxes against the plan: used, included, extra and what the extras cost per month. The dashboard meter shows the same numbers.", scope: "read", response: UsageSchema },
   { id: "createConnectLink", method: "post", path: "/connect-links", tag: "Accounts", summary: "Create a connect link", description: "Single-use hosted connect page URL, valid for 24 hours. Opening it a second time returns 410. Needs the admin scope.", scope: "admin", body: ConnectLinkBody, response: ConnectLinkSchema, status: 201, errors: [400] },
   { id: "listFolders", method: "get", path: "/accounts/{id}/folders", tag: "Read", summary: "List folders", description: "Folders (IMAP, Microsoft) or labels (Gmail).", scope: "read", ...ID, response: list(FolderSchema), errors: [404, 502] },
   { id: "listMessages", method: "get", path: "/accounts/{id}/messages", tag: "Read", summary: "List and search messages", description: "Newest first with cursor pagination. `q` accepts one syntax on every provider (from:, to:, subject:, after:, before:, has:attachment, bare words) and is translated to Gmail `q`, Graph `$filter`/`$search` or IMAP SEARCH.", scope: "read", ...ID, query: MessageListQuery, response: MessagePageSchema, errors: [400, 404, 502] },
@@ -90,7 +92,7 @@ export function buildOpenApi(base = appUrl()): Json {
   }
   const eventSchema = { type: "object", required: ["id", "type", "created", "data"], properties: { id: { type: "string", description: "Event id. Stays the same on retries and replays." }, type: { type: "string", enum: [...EVENT_TYPES] }, created: { type: "integer", description: "Unix seconds" }, data: { type: "object", additionalProperties: true } } };
   const webhooks = Object.fromEntries(EVENT_TYPES.map((e) => [e, { post: { summary: e, description: `Sent to endpoints that list \`${e}\`. Verify \`Inboxwire-Signature\` before trusting it.`, requestBody: { content: { "application/json": { schema: { $ref: "#/components/schemas/WebhookEvent" } } } }, responses: { "2XX": { description: "Return any 2xx within 10 seconds to acknowledge." } } } }]));
-  const err = js(ErrorSchema, "output", defs);
+  js(ErrorSchema, "output", defs); // hoists the real `Error` schema into defs (it used to be overwritten by a self-reference)
   return fixRefs({
     openapi: "3.1.0",
     info: { title: `${product.name} API`, version: "1.0.0", description: `Read, search and send mail across Gmail, Microsoft 365 and IMAP with one API. Authenticate with \`Authorization: Bearer <key>\`. Keys carry scopes: \`read\`, \`send\` (includes read) and \`admin\` (includes both). Pick the environment with the \`x-environment\` header (development, staging, production; default production). Errors are JSON: \`{"error": "code"}\`.` },
@@ -99,7 +101,7 @@ export function buildOpenApi(base = appUrl()): Json {
     paths, webhooks,
     components: {
       securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", description: "API key from Settings, API keys. `x-api-key` works too." } },
-      schemas: { ...defs, Error: err, WebhookEvent: eventSchema },
+      schemas: { ...defs, WebhookEvent: eventSchema },
     },
   }) as Json;
 }

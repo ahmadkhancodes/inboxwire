@@ -42,6 +42,12 @@ export function createMemoryDb(app: string, config: Record<string, string> = {})
     async setEntitlement(id, e) {
       ents.set(id, clone(e));
     },
+    async listCanceledEntitlements(endedBefore) {
+      return [...ents].filter(([, e]) => e.status === "canceled" && (e.expiresAt ?? e.checkedAt) <= endedBefore).map(([orgId, e]) => ({ orgId, entitlement: clone(e) }));
+    },
+    async deliveryCounts() {
+      return [...deliveries.values()].reduce<Record<string, number>>((m, d) => ((m[d.status] = (m[d.status] ?? 0) + 1), m), {});
+    },
     async hasStripeEvent(id) {
       return events.has(id);
     },

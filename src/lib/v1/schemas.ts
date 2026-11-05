@@ -75,6 +75,22 @@ export const ConnectLinkBody = z.object({
 });
 export const ConnectLinkSchema = z.object({ url: z.string().url(), token: z.string(), expiresAt: z.string().datetime(), environment: z.string() }).meta({ id: "ConnectLink" });
 
+export const UsageSchema = z.object({
+  plan: z.object({ id: z.string(), name: z.string() }),
+  mailboxes: z.object({
+    used: z.number().int(), included: z.number().int().describe("Mailboxes in the plan allowance"), extra: z.number().int().describe("Mailboxes above the allowance, billed per extra mailbox"),
+    mode: z.enum(["hard_cap", "metered", "unlimited"]).describe("hard_cap: connecting past the limit returns 402; metered: extras are billed; unlimited: no limit"),
+    extraPriceCents: z.number().int(), estimatedExtraCents: z.number().int(), level: z.enum(["ok", "near", "over"]), canAdd: z.boolean(),
+  }),
+  environments: z.object({ used: z.number().int(), limit: z.number().int() }),
+}).meta({ id: "Usage" });
+
+export const DeletionSchema = z.object({
+  deleted: z.literal(true), deletionRecordId: z.string(),
+  revocation: z.enum(["revoked", "not_applicable", "failed"]).describe("Provider-side token revocation. Our copy of the credentials is deleted in every case."),
+  rows: z.record(z.string(), z.number()),
+}).meta({ id: "Deletion" });
+
 // ----- view mappers (DB row -> public JSON; never includes secrets or payloads) -----
 import type { MailAccount, OutboxItem, WebhookDelivery, WebhookEndpoint } from "@/lib/db/types";
 const iso = (d?: Date | null) => (d ? d.toISOString() : null);

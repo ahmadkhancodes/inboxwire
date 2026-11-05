@@ -105,6 +105,35 @@ export interface OutboxItem {
 
 export const OUTBOX_RETENTION_MS = 7 * 86_400_000;
 
+/** An issued self-host licence key (Ed25519, offline-verifiable). One per paid invoice (`invoiceId` is unique). */
+export interface LicenceRecord {
+  id: string;
+  app: string;
+  orgId: string;
+  plan: "selfhost";
+  invoiceId: string;
+  /** The `IBW1.<payload>.<signature>` key. It is a bearer token for the customer's own instance, shown in Billing. */
+  key: string;
+  issuedAt: Date;
+  expiresAt: Date;
+  revokedAt?: Date | null;
+}
+
+/** Evidence that data was deleted (CASA / GDPR). Holds no mailbox content: the address is only kept as a sha256. */
+export interface DeletionRecord {
+  id: string;
+  app: string;
+  orgId: string;
+  envId: string | null;
+  accountId: string | null;
+  emailHash: string | null;
+  reason: "api" | "post_cancel_purge" | "org_deleted";
+  /** Provider-side revocation: `revoked` (Google), `not_applicable` (IMAP password, Microsoft has no per-token revoke), `failed` (our copy was deleted anyway). */
+  revocation: "revoked" | "not_applicable" | "failed";
+  deleted: Record<string, number>;
+  at: Date;
+}
+
 export interface OrgKey { orgId: string; app: string; wrappedDek: string; createdAt: Date }
 
 export interface MailStore {
@@ -151,6 +180,18 @@ export interface MailStore {
   /** Atomic claim: queued (or a `sending` item whose lease ended) with nextAttemptAt <= now becomes `sending`, attempts+1, lease until now+leaseMs. Null when someone else got it. */
   claimOutbox(id: string, now: Date, leaseMs: number): Promise<OutboxItem | null>;
   dueOutbox(now: Date, limit: number): Promise<OutboxItem[]>;
+  // M4: dashboard, compliance, licences, metrics
+  /** Newest first, across the given environments. */
+  listOutbox(envIds: string[], limit: number): Promise<OutboxItem[]>;
+  /** Removes one account with its credentials, cursors and outbox items. Returns row counts. */
+  deleteAccountData(accountId: string): Promise<Record<string, number>>;
+  /** Insert-if-absent on invoiceId. */
+  insertLicence(l: Omit<LicenceRecord, "app">): Promise<{ licence: LicenceRecord; created: boolean }>;
+  listLicences(orgId: string): Promise<LicenceRecord[]>;
+  addDeletionRecord(r: Omit<DeletionRecord, "app" | "at"> & { at?: Date }): Promise<DeletionRecord>;
+  listDeletionRecords(orgId: string): Promise<DeletionRecord[]>;
+  /** Counts for /metrics: accounts by state, outbox by status. */
+  mailCounts(): Promise<{ accounts: Record<string, number>; outbox: Record<string, number> }>;
   /** Removes environments, accounts, credentials, cursors, links, clients for an org. */
   deleteMailData(orgId: string): Promise<void>;
 }

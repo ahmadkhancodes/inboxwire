@@ -4,7 +4,7 @@ const PORT = 3100;
 export default defineConfig({
   testDir: "tests/e2e",
   timeout: 60_000,
-  use: { baseURL: process.env.BASE_URL ?? `http://localhost:${PORT}` },
+  use: { baseURL: process.env.BASE_URL ?? `http://localhost:${PORT}`, ...(process.env.CHROME_PATH ? { launchOptions: { executablePath: process.env.CHROME_PATH } } : {}) },
   webServer: process.env.BASE_URL
     ? undefined
     : {

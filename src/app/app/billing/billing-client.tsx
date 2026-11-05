@@ -1,6 +1,10 @@
 "use client";
 import { useEffect, useState } from "react";
+import type { ComponentProps } from "react";
 import { api } from "@/components/app/api";
+import { CopyButton } from "@/components/app/copy-button";
+import { LampMeter } from "@/components/app/lamp-meter";
+import type { LicenceView } from "@/lib/licences";
 import { Meter } from "@/components/app/meter";
 import { Panel } from "@/components/app/page-header";
 import { formatDate } from "@/components/app/api";
@@ -19,6 +23,8 @@ interface Props {
   renewsAt: number | null;
   cancelAtPeriodEnd: boolean;
   usage: UsageState[];
+  mailboxes: ComponentProps<typeof LampMeter>["usage"];
+  licences: LicenceView[];
   preselect: { plan: PlanId; interval: Interval } | null;
   returnedSession: string | null;
 }
@@ -126,10 +132,34 @@ export function BillingClient(p: Props) {
             {p.cancelAtPeriodEnd ? <p className="body-6 text-text-subtle">Your subscription is set to cancel. You keep {plan.name} until that date, then move to Free.</p> : null}
           </dl>
           <div className="flex flex-col gap-4">
+            <LampMeter usage={p.mailboxes} />
             {live.usage.map((u) => <Meter key={u.meter} state={u} />)}
           </div>
         </div>
       </Panel>
+
+      {p.licences.length > 0 || live.planId === "selfhost" ? (
+        <Panel title="Self-host licences" description="Paste a key into your instance (INBOXWIRE_LICENCE). Keys are verified offline. After a key expires you keep a 30 day read-only grace period.">
+          {p.licences.length === 0 ? (
+            <p className="body-6 text-text-subtle">Your first key is issued when the invoice is paid. It appears here within a minute.</p>
+          ) : (
+            <ul className="m-0 flex list-none flex-col gap-4 p-0">
+              {p.licences.map((l) => (
+                <li key={l.id} className="flex flex-col gap-2 border-b border-border pb-4 last:border-b-0 last:pb-0">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Badge tone={l.status === "valid" ? "success" : l.status === "grace" ? "warning" : "danger"}>{l.status === "valid" ? "Valid" : l.status === "grace" ? "Expired, in grace period" : l.status === "expired" ? "Expired" : "Not valid"}</Badge>
+                    <span className="caption-2 text-text-subtle tabular-nums">Issued {formatDate(l.issuedAt)} · expires {formatDate(l.expiresAt)} · grace ends {formatDate(l.graceEndsAt)}</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <code className="min-w-0 flex-1 break-all rounded-md border border-border bg-surface-sunken p-2 font-mono caption-5 text-text">{l.key}</code>
+                    <CopyButton value={l.key} label="Copy licence key" />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      ) : null}
 
       <section aria-labelledby="plans-h" className="flex flex-col gap-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

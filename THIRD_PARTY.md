@@ -10,3 +10,5 @@
 
 `google-auth-library` (Apache-2.0) comes with `googleapis` and is used only for its `OAuth2Client` token holder.
 All three are permissive, so they can ship inside the self-host image. Re-check with `npx license-checker --summary` before each release.
+
+**M4:** no new runtime dependency. The zip writer (`src/lib/zip.ts`), the SDK generator (`src/lib/sdk-gen.ts`), the Prometheus text output and the SSE stream use only the Node standard library. `packages/sdk` has no dependencies (MIT, ours). The Docker image adds only `node:22-bookworm-slim` (MIT) and, in compose, `mongo:7` (SSPL: it runs as a separate container the customer pulls themselves; Inboxwire does not redistribute it).

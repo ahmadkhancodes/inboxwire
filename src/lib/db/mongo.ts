@@ -57,6 +57,14 @@ export function createMongoDb(uri: string, dbName: string, app: string): Db {
       const { _id: _i, app: _a, ...rest } = d;
       return rest as Entitlement;
     },
+    async listCanceledEntitlements(endedBefore) {
+      const docs = await (await col<WithId<Entitlement & { app: string }>>("entitlements")).find({ app, status: "canceled" }).toArray();
+      return docs.map(({ _id, app: _a, ...rest }) => ({ orgId: String(_id), entitlement: rest as unknown as Entitlement })).filter((x) => (x.entitlement.expiresAt ?? x.entitlement.checkedAt) <= endedBefore);
+    },
+    async deliveryCounts() {
+      const rows = await (await col<Document>("webhook_deliveries")).aggregate([{ $match: { app } }, { $group: { _id: "$status", n: { $sum: 1 } } }]).toArray();
+      return Object.fromEntries(rows.map((r) => [String(r._id), Number(r.n)]));
+    },
     async setEntitlement(id, e) {
       await (await col<WithId<Entitlement & { app: string }>>("entitlements")).replaceOne({ _id: id }, { ...e, app }, { upsert: true });
     },
