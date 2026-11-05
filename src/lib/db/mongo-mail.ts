@@ -1,6 +1,6 @@
 import type { Collection, Db as MongoDatabase, Document } from "mongodb";
 import { uuidv7 } from "@/lib/ids";
-import type { AccountCredential, ConnectLink, Environment, MailAccount, MailStore, OAuthClient, OrgKey, OutboxItem, SyncCursor } from "./mail-types";
+import type { AccountCredential, ConnectLink, DeletionRecord, Environment, LicenceRecord, MailAccount, MailStore, OAuthClient, OrgKey, OutboxItem, SyncCursor } from "./mail-types";
 
 type WithId<T> = T & { _id: string };
 
@@ -106,6 +106,41 @@ export function createMongoMailStore(getDb: () => Promise<MongoDatabase>, app: s
       return stripAll<OutboxItem>(await (await col<WithId<OutboxItem>>("outbox"))
         .find({ app, status: { $in: ["queued", "sending"] }, nextAttemptAt: { $lte: now } }).sort({ nextAttemptAt: 1 }).limit(limit).toArray());
     },
+    async listOutbox(envIds, limit) {
+      return stripAll<OutboxItem>(await (await col<WithId<OutboxItem>>("outbox")).find({ app, envId: { $in: envIds } }).sort({ createdAt: -1 }).limit(limit).toArray());
+    },
+    async deleteAccountData(accountId) {
+      const d = await getDb();
+      const one = async (c: string, q: Document) => (await d.collection(c).deleteMany(q)).deletedCount;
+      return {
+        accounts: await one("accounts", { app, _id: accountId as never }),
+        credentials: await one("account_credentials", { app, _id: accountId as never }),
+        cursors: await one("sync_cursors", { app, accountId }),
+        outbox: await one("outbox", { app, accountId }),
+      };
+    },
+    async insertLicence(l) {
+      const c = await col<WithId<LicenceRecord>>("licences");
+      const rec: LicenceRecord = { ...l, app };
+      try { await c.insertOne({ _id: rec.id, ...rec }); return { licence: rec, created: true }; } catch (err) {
+        if (!dupKey(err)) throw err;
+        return { licence: strip<LicenceRecord>(await c.findOne({ app, invoiceId: l.invoiceId }))!, created: false };
+      }
+    },
+    async listLicences(orgId) { return stripAll<LicenceRecord>(await (await col<WithId<LicenceRecord>>("licences")).find({ app, orgId }).sort({ issuedAt: -1 }).toArray()); },
+    async addDeletionRecord(r) {
+      const rec: DeletionRecord = { ...r, app, at: r.at ?? new Date() };
+      await (await col<WithId<DeletionRecord>>("deletion_records")).insertOne({ _id: rec.id, ...rec });
+      return rec;
+    },
+    async listDeletionRecords(orgId) { return stripAll<DeletionRecord>(await (await col<WithId<DeletionRecord>>("deletion_records")).find({ app, orgId }).sort({ at: -1 }).limit(200).toArray()); },
+    async mailCounts() {
+      const group = async (c: string, field: string) => {
+        const rows = await (await getDb()).collection(c).aggregate([{ $match: { app } }, { $group: { _id: `$${field}`, n: { $sum: 1 } } }]).toArray();
+        return Object.fromEntries(rows.map((r) => [String(r._id), Number(r.n)]));
+      };
+      return { accounts: await group("accounts", "state"), outbox: await group("outbox", "status") };
+    },
     async deleteMailData(orgId) {
       const d = await getDb();
       const envIds = (await d.collection("environments").find({ app, orgId }).project({ _id: 1 }).toArray()).map((e) => String(e._id));
@@ -117,6 +152,7 @@ export function createMongoMailStore(getDb: () => Promise<MongoDatabase>, app: s
       await d.collection("connect_links").deleteMany({ app, envId: { $in: envIds } });
       await d.collection("outbox").deleteMany({ app, envId: { $in: envIds } });
       await d.collection("environments").deleteMany({ app, orgId });
+      await d.collection("licences").deleteMany({ app, orgId });
       await d.collection("org_keys").deleteOne({ _id: `${app}:${orgId}` as never });
     },
   };
@@ -128,6 +164,9 @@ export async function ensureMailIndexes(d: MongoDatabase) {
   await d.collection("oauth_clients").createIndex({ app: 1, envId: 1, provider: 1 }, { unique: true });
   await d.collection("accounts").createIndex({ app: 1, envId: 1, externalId: 1 }, { unique: true });
   await d.collection("accounts").createIndex({ app: 1, envId: 1, email: 1 });
+  await d.collection("licences").createIndex({ app: 1, invoiceId: 1 }, { unique: true });
+  await d.collection("licences").createIndex({ app: 1, orgId: 1, issuedAt: -1 });
+  await d.collection("deletion_records").createIndex({ app: 1, orgId: 1, at: -1 });
   await d.collection("accounts").createIndex({ app: 1, mode: 1, state: 1, nextPollAt: 1 });
   await d.collection("accounts").createIndex({ app: 1, "watch.id": 1 }, { partialFilterExpression: { "watch.id": { $type: "string" } } });
   await d.collection("sync_cursors").createIndex({ app: 1, accountId: 1 });

@@ -127,6 +127,10 @@ export interface Db extends MailStore {
   findBillingAccountByCustomer(customerId: string): Promise<BillingAccount | null>;
   getEntitlement(orgId: string): Promise<Entitlement | null>;
   setEntitlement(orgId: string, e: Entitlement): Promise<void>;
+  /** Canceled entitlements whose paid period ended at or before `endedBefore` (ms epoch), for the 30 day purge. */
+  listCanceledEntitlements(endedBefore: number): Promise<{ orgId: string; entitlement: Entitlement }[]>;
+  /** Delivery counts by status for /metrics. */
+  deliveryCounts(): Promise<Record<string, number>>;
   /** Webhook idempotency: was this event already processed successfully? */
   hasStripeEvent(id: string): Promise<boolean>;
   /** Record AFTER successful processing (fix for BACKEND_REUSE 2.2 #4). Returns false if already recorded. */

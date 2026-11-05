@@ -16,11 +16,11 @@ export const metadata: Metadata = {
 };
 
 const kit = [
-  { name: "Security questionnaire mapping", body: "Our components mapped to the assessment questions, so you only answer for your own code." },
-  { name: "Scan configuration and latest report", body: "The ZAP configuration and the report from the most recent release." },
+  { name: "Assessment checklist", body: "Our components mapped to the assessment questions, so you only answer for your own code." },
+  { name: "Data-flow and data-inventory templates", body: "Pre-filled for our part, with blanks for yours. Where mail data flows, and where it never goes." },
+  { name: "Evidence index", body: "Every item an assessor asks for, where it lives and who holds it. The ZAP configuration is in the zip; the latest report is attached to each tagged release." },
   { name: "Data deletion evidence", body: "How DELETE /v1/accounts/{id} revokes the token and removes rows, with the deletion record." },
-  { name: "Architecture diagram", body: "Where mail data flows, and where it never goes." },
-  { name: "Encryption notes", body: "Envelope encryption of tokens and mail metadata at rest." },
+  { name: "Encryption notes and architecture", body: "Envelope encryption of tokens at rest, and the components and trust boundaries." },
 ];
 
 const faq = [
@@ -28,7 +28,7 @@ const faq = [
   { q: "Do you resell or pay for the assessment?", a: "No. You hire your own assessor and pay them directly. We never resell an assessment, and we do not run a shared verified Google app." },
   { q: "Which apps never need it?", a: "Send-only apps, apps set to Internal inside your own Workspace organisation, apps in Testing under 100 users, and IMAP or SMTP connections with app passwords. Microsoft 365 has no CASA." },
   { q: "Is the kit available on the free plan?", a: "Yes. It is included on every plan, including Developer." },
-  { q: "When can I download it?", a: "The kit is generated for each tagged release. The download opens with the first release; until then, this page and the calculator are live." },
+  { q: "What is not in the zip?", a: "The ZAP report. CI attaches it to each tagged release next to the same version of the kit; the zip lists where to find it. The kit covers our components only." },
 ];
 
 export default function CasaPage() {
@@ -40,7 +40,10 @@ export default function CasaPage() {
           <p className="body-3 text-text-subtle md:title-1">
             Gmail for external users needs Google&apos;s yearly security assessment (CASA) for your app. We give you the evidence for our part, free on every plan. Some apps do not need it at all. Answer five questions and we will tell you which you are.
           </p>
-          <ButtonLink href="#calculator" size="lg">Check my app</ButtonLink>
+          <div className="flex flex-wrap gap-3">
+            <ButtonLink href="#calculator" size="lg">Check my app</ButtonLink>
+            <ButtonLink href="/casa/kit.zip" size="lg" variant="secondary" prefetch={false} download>Download the kit (zip)</ButtonLink>
+          </div>
         </div>
       </Section>
 

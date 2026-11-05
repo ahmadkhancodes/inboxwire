@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/app/app-shell";
+import { LicenceBanner } from "@/components/app/licence-banner";
 import { UsageBanner } from "@/components/app/usage-banner";
 import { METERS_SHOWN } from "@/components/app/labels";
 import { product } from "@/config/product";
@@ -20,7 +21,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       user={{ name: ctx.user.name, email: ctx.user.email }}
       isAdmin={isFounderAdmin(ctx.user.email)}
       productName={product.name}
-      banners={<UsageBanner usage={usage} entitlement={ent} />}
+      banners={<><LicenceBanner /><UsageBanner usage={usage} entitlement={ent} /></>}
     >
       {children}
     </AppShell>

@@ -2,6 +2,8 @@ import type Stripe from "stripe";
 import { freePlan, planById, planForLookupKey, product, type MeterId, type Plan, type PlanId } from "@/config/product";
 import type { Entitlement } from "@/lib/db/types";
 import { HttpError } from "@/lib/http";
+import { instanceLicence } from "@/lib/licences";
+import { isPlanLine } from "./plan-line";
 
 // Ported from trayo server/billing.ts (computeEntitlement, periodEndOf, invoiceSubscriptionId, NONE,
 // lifetimeEntitlement, cancelAppSubscriptions). Generalised from isPro to multi-tier plans keyed by lookup_key.
@@ -58,7 +60,8 @@ export async function computeEntitlement(
   let trialUsed = !!prev?.trialUsed;
   for (const s of subs) {
     if (s.trial_start) trialUsed = true;
-    const item = s.items.data[0];
+    // The extra-mailbox line can sit next to the plan line; the plan line decides the plan.
+    const item = s.items.data.find((i) => isPlanLine(i.price.lookup_key)) ?? s.items.data[0];
     const key = item?.price.lookup_key ?? null;
     // C-28: only this app's lookup keys count.
     const match = key && key.startsWith(`${app}_`) ? planForLookupKey(key) : null;
@@ -111,6 +114,9 @@ export async function cancelAppSubscriptions(stripe: Pick<Stripe, "subscriptions
  * past_due keeps the plan for product.graceDays (C-20), then falls back to Free.
  */
 export function effectivePlan(e: Entitlement | null, now = Date.now()): Plan {
+  // A self-host instance with a valid licence (or inside its 30 day grace) runs the Self-host plan regardless of Stripe.
+  const lic = instanceLicence(now);
+  if (lic && (lic.status === "valid" || lic.status === "grace")) return planById("selfhost") ?? freePlan;
   if (!e || !e.isPaid) return freePlan;
   if (e.status === "lifetime") return planById(e.plan) ?? freePlan;
   const slack = 2 * 864e5; // tolerate renewal webhooks arriving a little late

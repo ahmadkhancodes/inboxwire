@@ -1,7 +1,7 @@
 "use client";
 import { hardNavigate } from "./api";
 import {
-  ClipboardText, CreditCard, Gauge, Key, List, PlugsConnected, ShieldCheck, SignOut, SquaresFour, User, UsersThree, WebhooksLogo, X,
+  Broadcast, ClipboardText, CreditCard, ListChecks, Receipt, Tray, Gauge, Key, List, PlugsConnected, ShieldCheck, SignOut, SquaresFour, User, UsersThree, WebhooksLogo, X,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -14,14 +14,20 @@ import { OrgSwitcher } from "./org-switcher";
 type IconType = typeof User;
 interface NavItem { href: string; label: string; icon: IconType }
 
-const MAIN: NavItem[] = [{ href: "/app", label: "Overview", icon: SquaresFour }];
+const MAIN: NavItem[] = [
+  { href: "/app", label: "Overview", icon: SquaresFour },
+  { href: "/app/lines", label: "Lines", icon: Broadcast },
+  { href: "/app/ticker", label: "Ticker", icon: Receipt },
+  { href: "/app/deliveries", label: "Deliveries", icon: ListChecks },
+  { href: "/app/outbox", label: "Outbox", icon: Tray },
+  { href: "/app/keys", label: "Keys", icon: Key },
+  { href: "/app/oauth-clients", label: "OAuth clients", icon: PlugsConnected },
+  { href: "/app/billing", label: "Billing", icon: CreditCard },
+];
 const SETTINGS: NavItem[] = [
   { href: "/app/settings/profile", label: "Profile", icon: User },
   { href: "/app/settings/security", label: "Security", icon: ShieldCheck },
   { href: "/app/settings/members", label: "Members", icon: UsersThree },
-  { href: "/app/settings/api-keys", label: "API keys", icon: Key },
-  { href: "/app/settings/oauth-clients", label: "OAuth clients", icon: PlugsConnected },
-  { href: "/app/billing", label: "Billing", icon: CreditCard },
   { href: "/app/settings/webhooks", label: "Webhooks", icon: WebhooksLogo },
   { href: "/app/settings/audit", label: "Audit log", icon: ClipboardText },
 ];

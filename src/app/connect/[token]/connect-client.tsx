@@ -13,6 +13,7 @@ const MESSAGES: Record<string, string> = {
   link_expired: "This link has expired. Ask the app for a new one.",
   imap_verification_failed: "We could not sign in with those details.",
   rate_limited: "Too many attempts. Wait a few minutes and try again.",
+  mailbox_limit: "This app has reached its mailbox limit, so we could not add your mailbox. Ask the app owner to upgrade their plan.",
 };
 
 export function ConnectClient({ token, email: initial }: { token: string; email: string }) {

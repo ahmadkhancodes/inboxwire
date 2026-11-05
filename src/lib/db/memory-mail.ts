@@ -1,5 +1,5 @@
 import { uuidv7 } from "@/lib/ids";
-import type { AccountCredential, ConnectLink, Environment, MailAccount, MailStore, OAuthClient, OrgKey, OutboxItem, SyncCursor } from "./mail-types";
+import type { AccountCredential, ConnectLink, DeletionRecord, Environment, LicenceRecord, MailAccount, MailStore, OAuthClient, OrgKey, OutboxItem, SyncCursor } from "./mail-types";
 
 /** In-memory MailStore (same semantics as mongo-mail.ts; shared contract in tests/unit/mailstore.test.ts). */
 export function createMemoryMailStore(app: string): MailStore {
@@ -11,6 +11,8 @@ export function createMemoryMailStore(app: string): MailStore {
   const cursors = new Map<string, SyncCursor>();
   const links = new Map<string, ConnectLink>();
   const outbox = new Map<string, OutboxItem>();
+  const licences = new Map<string, LicenceRecord>();
+  const deletions: DeletionRecord[] = [];
   const eligible = (o: OutboxItem, now: Date) => (o.status === "queued" || o.status === "sending") && !!o.nextAttemptAt && o.nextAttemptAt <= now;
   const clone = <T>(x: T): T => structuredClone(x);
   const orEnvs = (orgId: string) => new Set([...envs.values()].filter((e) => e.orgId === orgId).map((e) => e.id));
@@ -113,6 +115,31 @@ export function createMemoryMailStore(app: string): MailStore {
     async dueOutbox(now, limit) {
       return [...outbox.values()].filter((o) => eligible(o, now)).sort((a, b) => a.nextAttemptAt!.getTime() - b.nextAttemptAt!.getTime()).slice(0, limit).map(clone);
     },
+    async listOutbox(envIds, limit) {
+      return [...outbox.values()].filter((o) => envIds.includes(o.envId)).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, limit).map(clone);
+    },
+    async deleteAccountData(accountId) {
+      const n = { accounts: 0, credentials: 0, cursors: 0, outbox: 0 };
+      if (accounts.delete(accountId)) n.accounts++;
+      if (creds.delete(accountId)) n.credentials++;
+      for (const [k, c] of cursors) if (c.accountId === accountId) { cursors.delete(k); n.cursors++; }
+      for (const [k, o] of outbox) if (o.accountId === accountId) { outbox.delete(k); n.outbox++; }
+      return n;
+    },
+    async insertLicence(l) {
+      const hit = [...licences.values()].find((x) => x.invoiceId === l.invoiceId);
+      if (hit) return { licence: clone(hit), created: false };
+      const rec: LicenceRecord = { ...l, app };
+      licences.set(rec.id, rec);
+      return { licence: clone(rec), created: true };
+    },
+    async listLicences(orgId) { return [...licences.values()].filter((l) => l.orgId === orgId).sort((a, b) => b.issuedAt.getTime() - a.issuedAt.getTime()).map(clone); },
+    async addDeletionRecord(r) { const rec: DeletionRecord = { ...r, app, at: r.at ?? new Date() }; deletions.push(rec); return clone(rec); },
+    async listDeletionRecords(orgId) { return deletions.filter((d) => d.orgId === orgId).sort((a, b) => b.at.getTime() - a.at.getTime()).map(clone); },
+    async mailCounts() {
+      const tally = (xs: string[]) => xs.reduce<Record<string, number>>((m, k) => ((m[k] = (m[k] ?? 0) + 1), m), {});
+      return { accounts: tally([...accounts.values()].map((a) => a.state)), outbox: tally([...outbox.values()].map((o) => o.status)) };
+    },
     async deleteMailData(orgId) {
       const ids = orEnvs(orgId);
       for (const [k, o] of outbox) if (ids.has(o.envId)) outbox.delete(k);
@@ -123,6 +150,7 @@ export function createMemoryMailStore(app: string): MailStore {
       for (const [k, c] of cursors) if (accIds.has(c.accountId)) cursors.delete(k);
       for (const id of ids) envs.delete(id);
       keys.delete(orgId);
+      for (const [k, l] of licences) if (l.orgId === orgId) licences.delete(k);
     },
   };
 }

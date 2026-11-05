@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import { planForLookupKey } from "@/config/product";
-import type { Db } from "@/lib/db/types";
+import type { Db, Entitlement } from "@/lib/db/types";
 import { json } from "@/lib/http";
 import { log } from "@/lib/logger";
 import { NONE, cancelAppSubscriptions, computeEntitlement, invoiceSubscriptionId, lifetimeEntitlement } from "./entitlement";
@@ -16,6 +16,8 @@ export interface WebhookDeps {
   secret: string;
   now?: () => number;
   onChange?: (orgId: string, type: string) => Promise<void>;
+  /** Called after `invoice.paid` has updated the entitlement (the hook issues self-host licences). Failures make Stripe retry. */
+  onInvoicePaid?: (x: { orgId: string; invoiceId: string; entitlement: Entitlement }) => Promise<void>;
 }
 
 export async function handleStripeWebhook(rawBody: string, signature: string | null, deps: WebhookDeps): Promise<Response> {
@@ -83,8 +85,10 @@ export async function handleStripeWebhook(rawBody: string, signature: string | n
     event.type === "checkout.session.completed" ||
     event.type === "charge.refunded";
   if (relevant) {
-    await db.setEntitlement(orgId, await computeEntitlement(stripe, app, customerId, prev?.status === "lifetime" ? prev : null, now));
+    const next = await computeEntitlement(stripe, app, customerId, prev?.status === "lifetime" ? prev : null, now);
+    await db.setEntitlement(orgId, next);
     await deps.onChange?.(orgId, event.type);
+    if (event.type === "invoice.paid" && obj.id) await deps.onInvoicePaid?.({ orgId, invoiceId: obj.id, entitlement: next });
   }
   await db.markStripeEvent(event.id, event.type); // only after success
   return json({ received: true });

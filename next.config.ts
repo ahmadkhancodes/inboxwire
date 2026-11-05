@@ -5,6 +5,8 @@ import { securityHeaders } from "./src/lib/security/headers";
 // so auth/session reads (cookies()) need no Suspense boundaries. A product can switch it on later.
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // The self-host Docker image sets BUILD_STANDALONE=1 for a minimal server bundle; Vercel builds are unaffected.
+  ...(process.env.BUILD_STANDALONE === "1" ? { output: "standalone" as const } : {}),
   pageExtensions: ["ts", "tsx", "md", "mdx"],
   serverExternalPackages: ["mongodb", "imapflow", "googleapis", "google-auth-library"],
   turbopack: {

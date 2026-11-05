@@ -4,12 +4,17 @@ import type { ConnectLink, Db, MailAccount, OAuthProvider } from "@/lib/db/types
 import { appUrl } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 import { uuidv7 } from "@/lib/ids";
+import { assertCanAddMailbox, syncExtraMailboxes } from "@/lib/billing/mailboxes";
+import { getStripe } from "@/lib/billing/stripe";
+import { log } from "@/lib/logger";
 import { orgOfEnv, sealForOrg } from "@/lib/secrets";
 import type { TokenSet } from "./oauth";
 
 export interface CompleteDeps extends BackendDeps {
   emit?: Emit;
   imapFactory?: ImapFactory;
+  /** Tests: skip the Stripe quantity sync. */
+  noBilling?: boolean;
 }
 
 async function announce(db: Db, orgId: string, a: MailAccount, deps: CompleteDeps) {
@@ -37,6 +42,19 @@ async function tryPush(db: Db, a: MailAccount, deps: CompleteDeps): Promise<Mail
   }
 }
 
+/** 402 `mailbox_limit` before a NEW mailbox is added past a hard-capped plan (reconnecting an existing address is always allowed). */
+export async function ensureCapacity(db: Db, envId: string, email: string | null) {
+  if (email && (await db.findAccountByEmail(envId, email.toLowerCase()))) return;
+  await assertCanAddMailbox(db, await orgOfEnv(db, envId));
+}
+
+/** Best effort: bill the extra mailboxes of a Growth subscription after the count changed. */
+export async function billExtraMailboxes(db: Db, orgId: string) {
+  const stripe = getStripe();
+  if (!stripe) return;
+  await syncExtraMailboxes(stripe, db, orgId).catch((e: Error) => log.warn("extra_mailbox_sync_failed", { message: e.message }));
+}
+
 async function register(db: Db, link: ConnectLink, a: { email: string; provider: MailAccount["provider"]; backend: MailAccount["backend"] }, creds: Parameters<Db["setCredentials"]>[0] extends infer C ? Omit<NonNullable<C>, "accountId"> : never, deps: CompleteDeps) {
   const orgId = await orgOfEnv(db, link.envId);
   const email = a.email.toLowerCase();
@@ -48,6 +66,7 @@ async function register(db: Db, link: ConnectLink, a: { email: string; provider:
   await db.setCredentials({ ...creds, accountId: acct.id });
   const final = await tryPush(db, acct, deps);
   await announce(db, orgId, final, deps);
+  if (!prev && !deps.noBilling) await billExtraMailboxes(db, orgId);
   return final;
 }
 
@@ -65,6 +84,7 @@ export function connectResult(link: ConnectLink, a: MailAccount) {
 
 /** IMAP/SMTP: verify first (wrong password = 422, link NOT burned), then consume the link and store encrypted settings. */
 export async function completeImap(db: Db, link: ConnectLink, input: { email: string; imap: ImapSettings; smtp?: Omit<ImapSettings, "user" | "pass"> }, deps: CompleteDeps = {}) {
+  await ensureCapacity(db, link.envId, input.email);
   const backend = new ImapBackend(input.imap, deps.imapFactory ?? imapflowFactory);
   try {
     await backend.connect();
@@ -82,6 +102,7 @@ export async function completeImap(db: Db, link: ConnectLink, input: { email: st
 
 /** OAuth callback success: consume the link, store encrypted tokens, create the account. */
 export async function completeOAuth(db: Db, link: ConnectLink, provider: OAuthProvider, tokens: TokenSet, email: string, deps: CompleteDeps = {}) {
+  await ensureCapacity(db, link.envId, email);
   if (!(await db.consumeConnectLink(link.id, deps.now ?? new Date()))) throw new HttpError(410, "link_used");
   const orgId = await orgOfEnv(db, link.envId);
   const a = await register(db, link, { email, provider, backend: provider === "google" ? "gmail_api" : "graph" }, {

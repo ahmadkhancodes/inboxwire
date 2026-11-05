@@ -1,0 +1,49 @@
+# Inboxwire by BufferSol: self-host. `cp .env.example .env`, fill the REQUIRED lines, then `docker compose up -d`.
+# Guide: docs/selfhost.md (also served at /docs/self-host).
+services:
+  app:
+    image: ghcr.io/ahmadkhancodes/inboxwire:${INBOXWIRE_VERSION:-latest}
+    build: .
+    restart: unless-stopped
+    depends_on:
+      mongo: { condition: service_healthy }
+    ports: ["${PORT:-3000}:3000"]
+    environment:
+      NODE_ENV: production
+      DB_DRIVER: mongo
+      MONGODB_URI: mongodb://mongo:27017/inboxwire
+      MONGODB_DB: inboxwire
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?set NEXT_PUBLIC_APP_URL to the public URL of this instance}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?generate with: openssl rand -base64 32}
+      MASTER_KEY: ${MASTER_KEY:?generate with: openssl rand -base64 32 (losing it makes stored mailbox credentials unreadable)}
+      CRON_SECRET: ${CRON_SECRET:?generate with: openssl rand -hex 24}
+      ALTCHA_HMAC_KEY: ${ALTCHA_HMAC_KEY:?generate with: openssl rand -hex 24}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      INBOXWIRE_LICENCE: ${INBOXWIRE_LICENCE:-}
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
+      # console prints sign-in links to `docker compose logs app`. Switch to smtp or resend for real mail.
+      MAIL_PROVIDER: ${MAIL_PROVIDER:-console}
+      MAIL_CONSOLE_PRINT: ${MAIL_CONSOLE_PRINT:-1}
+      MAIL_FROM: ${MAIL_FROM:-Inboxwire <no-reply@localhost>}
+  worker:
+    image: ghcr.io/ahmadkhancodes/inboxwire:${INBOXWIRE_VERSION:-latest}
+    build: .
+    restart: unless-stopped
+    depends_on: [app]
+    entrypoint: []
+    command: ["node", "scripts/selfhost-cron.mjs"]
+    environment:
+      APP_URL: http://app:3000
+      CRON_SECRET: ${CRON_SECRET:?set CRON_SECRET}
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes: ["mongo-data:/data/db"]
+    # Mongo is not published to the host. Back up the volume or run mongodump from this container.
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+volumes:
+  mongo-data:

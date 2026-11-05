@@ -27,8 +27,21 @@ export async function meter(db: Db, orgId: string, m: MeterId, by = 1, now = new
   return { ...usageState(m, used, limit), within: used <= limit };
 }
 
+/** Active mailboxes: every account in every environment of the org. The one number the meter, `GET /v1/usage` and the Stripe quantity share. */
+export async function countMailboxes(db: Db, orgId: string): Promise<number> {
+  let n = 0;
+  for (const e of await db.listEnvironments(orgId)) n += (await db.listAccounts(e.id)).length;
+  return n;
+}
+
+async function used(db: Db, orgId: string, m: MeterId, now: Date): Promise<number> {
+  if (m === "mailboxes") return countMailboxes(db, orgId);
+  if (m === "environments") return (await db.listEnvironments(orgId)).length;
+  return db.getUsage(orgId, m, periodOf(now));
+}
+
 export async function currentUsage(db: Db, orgId: string, meters: MeterId[], now = new Date()): Promise<UsageState[]> {
   const ent = await db.getEntitlement(orgId);
   const plan = effectivePlan(ent, now.getTime());
-  return Promise.all(meters.map(async (m) => usageState(m, await db.getUsage(orgId, m, periodOf(now)), plan.limits[m])));
+  return Promise.all(meters.map(async (m) => usageState(m, await used(db, orgId, m, now), plan.limits[m])));
 }

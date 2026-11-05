@@ -4,7 +4,9 @@ import { planById } from "@/config/product";
 import { can } from "@/lib/auth/roles";
 import { requireOrg } from "@/lib/auth/session";
 import { effectivePlan } from "@/lib/billing/entitlement";
+import { mailboxUsage } from "@/lib/billing/mailboxes";
 import { currentUsage } from "@/lib/billing/usage";
+import { orgLicences } from "@/lib/licences";
 import { getDb } from "@/lib/db";
 import { BillingClient } from "./billing-client";
 
@@ -19,7 +21,9 @@ export default async function BillingPage({ searchParams }: { searchParams: SP }
   const db = await getDb();
   const ent = await db.getEntitlement(ctx.org.id);
   const plan = effectivePlan(ent);
-  const usage = await currentUsage(db, ctx.org.id, METERS_SHOWN);
+  const usage = (await currentUsage(db, ctx.org.id, METERS_SHOWN)).filter((u) => u.meter !== "mailboxes");
+  const mailboxes = await mailboxUsage(db, ctx.org.id);
+  const licences = await orgLicences(db, ctx.org.id);
   const want = one(sp.plan);
   const wanted = want ? planById(want) : undefined;
   return (
@@ -34,6 +38,8 @@ export default async function BillingPage({ searchParams }: { searchParams: SP }
         renewsAt={ent?.expiresAt ?? null}
         cancelAtPeriodEnd={!!ent?.cancelAtPeriodEnd}
         usage={usage}
+        mailboxes={{ used: mailboxes.used, included: mailboxes.included, extra: mailboxes.extra, mode: mailboxes.mode, extraPriceCents: mailboxes.extraPriceCents, estimatedExtraCents: mailboxes.estimatedExtraCents, level: mailboxes.state.level }}
+        licences={licences}
         preselect={wanted && wanted.id !== "free" ? { plan: wanted.id, interval: one(sp.interval) === "month" ? "month" : "year" } : null}
         returnedSession={one(sp.session_id) ?? null}
       />

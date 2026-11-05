@@ -8,11 +8,13 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit -p .",
-    "test": "vitest run",
+    "test": "vitest run && npm test -w @buffersol/inboxwire-sdk",
     "stripe:setup": "tsx scripts/stripe-setup.ts",
     "db:indexes": "tsx scripts/ensure-indexes.ts",
     "screenshots": "tsx scripts/screenshots.ts",
-    "deploy": "scripts/deploy.sh"
+    "deploy": "scripts/deploy.sh",
+    "sdk:generate": "tsx scripts/generate-sdk.ts",
+    "casa:kit": "tsx scripts/build-casa-kit.ts dev casa-kit.zip"
   },
   "dependencies": {
     "@better-auth/api-key": "^1.7.17",
@@ -46,5 +48,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^5.1.0"
-  }
+  },
+  "workspaces": [
+    "packages/sdk"
+  ]
 }

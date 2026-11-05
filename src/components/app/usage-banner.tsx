@@ -3,12 +3,15 @@ import { Notice } from "@/components/ui/states";
 import type { Entitlement } from "@/lib/db/types";
 import type { UsageState } from "@/lib/billing/usage";
 import { product } from "@/config/product";
+import { effectivePlan } from "@/lib/billing/entitlement";
 import { METER_LABELS, fmt } from "./labels";
 
 /** Shown in the app layout when a meter is near/over its limit, or a payment failed. */
 export function UsageBanner({ usage, entitlement }: { usage: UsageState[]; entitlement: Entitlement | null }) {
   const worst = [...usage].filter((u) => u.level !== "ok").sort((a, b) => b.ratio - a.ratio)[0];
   const pastDue = entitlement?.status === "past_due";
+  const metered = effectivePlan(entitlement).id === product.extraMailbox.plan;
+  const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
   if (!worst && !pastDue) return null;
   const link = (label: string) => (
     <Link href="/app/billing" className="button-sm inline-flex min-h-11 items-center rounded-md border border-border-strong bg-surface px-3 py-2 text-text transition-colors duration-300 hover:bg-surface-raised focus-visible:focus-ring">
@@ -30,7 +33,7 @@ export function UsageBanner({ usage, entitlement }: { usage: UsageState[]; entit
         >
           You have used {fmt(worst.used)} of {fmt(worst.limit)} {METER_LABELS[worst.meter].plural}
           {METER_LABELS[worst.meter].period ? ` ${METER_LABELS[worst.meter].period}` : ""}.
-          {worst.meter === "mailboxes" ? " Mailboxes are never disconnected for quota; extra mailboxes are billed at $0.99 each." : ""}
+          {worst.meter === "mailboxes" ? (metered ? ` Connected mailboxes keep working; each extra one is billed at ${money(product.extraMailbox.usd)} a month.` : " Connected mailboxes keep working; new connections are refused until you upgrade or remove one.") : ""}
         </Notice>
       ) : null}
     </div>

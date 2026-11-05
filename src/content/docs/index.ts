@@ -2,6 +2,8 @@ import { api } from "./api";
 import { authentication } from "./authentication";
 import { billing } from "./billing";
 import { gettingStarted } from "./getting-started";
+import { quickstart } from "./quickstart";
+import { selfHost } from "./self-host";
 import type { DocPage } from "./types";
 import { webhooks } from "./webhooks";
 
@@ -12,11 +14,11 @@ export interface DocGroup {
   docs: DocPage[];
 }
 
-export const docs: DocPage[] = [gettingStarted, authentication, billing, webhooks, api];
+export const docs: DocPage[] = [gettingStarted, quickstart, authentication, billing, webhooks, api, selfHost];
 
 export const docGroups: DocGroup[] = [
-  { title: "Start here", docs: [gettingStarted, authentication] },
-  { title: "Build", docs: [api, webhooks] },
+  { title: "Start here", docs: [gettingStarted, quickstart, authentication] },
+  { title: "Build", docs: [api, webhooks, selfHost] },
   { title: "Account", docs: [billing] },
 ];
 

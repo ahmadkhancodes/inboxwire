@@ -28,3 +28,11 @@ The legal pages under `src/content/legal/*` render these placeholders verbatim u
 - `{{jurisdiction}}`: governing law and courts for the terms (country/state of BufferSol Technologies' registration).
 - `{{registered address}}`: registered business address of BufferSol Technologies, used in the privacy policy, terms and DPA.
 Also confirm before launch: `legal@buffersoltech.com` as the security-report and legal contact, and the 12-month liability cap and transfer wording in `terms.ts`/`dpa.ts` (drafted by us, not reviewed by a lawyer).
+
+## F. M4 owner steps (licences, metrics, image, SDK)
+1. **Licence keypair** (once, on a trusted machine): `openssl genpkey -algorithm ed25519 -out licence-private.pem && openssl pkey -in licence-private.pem -pubout -out licence-public.pem`. Put the private PEM in the cloud environment as `LICENCE_SIGNING_KEY` (Vercel project env, production; `\n` escapes are accepted) and nowhere else, then delete the file. Add the public PEM as a GitHub repository **variable** `LICENCE_PUBLIC_KEY` (https://github.com/ahmadkhancodes/inboxwire/settings/variables/actions) so the image build bakes it in. Without the private key no licence is issued after `invoice.paid`.
+2. **METRICS_TOKEN**: `openssl rand -hex 24`, set in Vercel env; point Prometheus (or any scraper) at `/metrics` with it as a bearer token.
+3. **Indexes**: `npm run db:indexes` once Mongo is connected (adds `licences` and `deletion_records`).
+4. **Cloudflare cron worker**: redeploy `infra/cron-worker` so `JOBS` includes `purge-canceled` (wrangler.toml already lists it).
+5. **GHCR**: the first `git tag v0.1.0 && git push --tags` builds and pushes `ghcr.io/ahmadkhancodes/inboxwire` and attaches `casa-kit.zip` to the release; make the package public at https://github.com/users/ahmadkhancodes/packages after the first push.
+6. **SDK on npm**: needs an npm token for the `@buffersol` scope (https://www.npmjs.com/settings/buffersol/tokens), then `npm publish -w @buffersol/inboxwire-sdk --access public`.
