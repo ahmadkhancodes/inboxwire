@@ -111,6 +111,8 @@ export const product = {
       trialDays: 0,
     },
   ] satisfies Plan[],
+  /** Extra mailbox over the Cloud Growth allowance. USD cents per month, prorated daily (Stripe price docs/STRIPE.md). */
+  extraMailbox: { usd: 99, lookupKey: `${slug}_extra_mailbox_monthly`, plan: "growth" as PlanId },
   /** Grace period after a failed payment (past_due keeps the plan, C-20) before limits fall to Free. */
   graceDays: 7,
   /** Remote flag defaults (overridden by APP_FLAGS env JSON and the Mongo `config` collection). */

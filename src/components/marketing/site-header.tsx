@@ -88,8 +88,8 @@ export function SiteHeader() {
           ))}
         </nav>
         <div className="flex items-center gap-1">
-          <Link href="/sign-in" className={cn(buttonClass("tertiary", "md"), "hidden md:inline-flex")}>Sign in</Link>
-          <Link href="/sign-in" className={cn(buttonClass("primary", "md"), "hidden md:inline-flex")}>Start free</Link>
+          <Link href="/sign-in" className={cn(buttonClass("tertiary", "md"), "max-md:hidden")}>Sign in</Link>
+          <Link href="/sign-in" className={cn(buttonClass("primary", "md"), "max-md:hidden")}>Start free</Link>
           <ThemeToggle />
           <button
             ref={toggleRef}

@@ -56,6 +56,16 @@ export function dbContract(name: string, make: () => Promise<Db>) {
       expect((await db.listAudit(org, { before: new Date(1500) })).map((x) => x.action)).toEqual(["a.one"]);
     });
 
+    it("uptime checks come back newest first, filtered by time and target", async () => {
+      const db = await make();
+      const target = `t_${Math.random()}`;
+      await db.recordUptimeCheck({ target, ok: true, ms: 40, httpStatus: 200, at: new Date(1000) });
+      await db.recordUptimeCheck({ target, ok: false, ms: 900, httpStatus: 503, at: new Date(3000) });
+      const all = await db.listUptimeChecks({ since: new Date(0), target });
+      expect(all.map((x) => x.ok)).toEqual([false, true]);
+      expect((await db.listUptimeChecks({ since: new Date(2000), target })).length).toBe(1);
+    });
+
     it("webhook endpoints are scoped to their org; due deliveries are found", async () => {
       const db = await make();
       const org = `org_${Math.random()}`;

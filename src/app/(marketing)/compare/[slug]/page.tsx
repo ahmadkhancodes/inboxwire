@@ -51,8 +51,8 @@ export default async function ComparePage({ params }: Props) {
       </Section>
       <Faq title="Common questions" items={entry.faq} />
       <FinalCta
-        title={`Try ${product.name} on one form`}
-        body="Point a form at your endpoint and watch the first delivery receipt arrive."
+        title={`Try ${product.name} on three mailboxes`}
+        body="Connect a mailbox and watch the first signed webhook arrive."
         cta={{ href: "/sign-in", label: "Start free" }}
         note="No credit card needed."
       />

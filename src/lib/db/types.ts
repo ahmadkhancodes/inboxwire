@@ -85,6 +85,19 @@ export interface Suppression {
   at: Date;
 }
 
+export interface UptimeCheck {
+  id: string;
+  app: string;
+  /** What was probed, e.g. "api" or "database". */
+  target: string;
+  ok: boolean;
+  /** Round trip in milliseconds. */
+  ms: number;
+  /** HTTP status when the probe was an HTTP call, else null. */
+  httpStatus: number | null;
+  at: Date;
+}
+
 export interface Db {
   readonly app: string;
 
@@ -127,6 +140,11 @@ export interface Db {
   isSuppressed(email: string, scope?: string): Promise<boolean>;
   removeSuppression(email: string, scope?: string): Promise<void>;
 
+  // uptime probe results (public /status page)
+  recordUptimeCheck(c: Omit<UptimeCheck, "id" | "app" | "at"> & { at?: Date }): Promise<UptimeCheck>;
+  /** Newest first, only checks at or after `since`. */
+  listUptimeChecks(opts: { since: Date; target?: string; limit?: number }): Promise<UptimeCheck[]>;
+
   // remote flags
   getConfig(): Promise<Record<string, string>>;
   setConfig(key: string, value: string): Promise<void>;
@@ -137,3 +155,5 @@ export interface Db {
 }
 
 export const DELIVERY_TTL_DAYS = 90;
+/** Probe results are kept a little longer than the 90 day history the status page shows. */
+export const UPTIME_TTL_DAYS = 100;

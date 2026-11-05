@@ -1,5 +1,5 @@
 import { uuidv7 } from "@/lib/ids";
-import type { AuditEntry, BillingAccount, Db, Entitlement, Suppression, WebhookDelivery, WebhookEndpoint } from "./types";
+import type { UptimeCheck, AuditEntry, BillingAccount, Db, Entitlement, Suppression, WebhookDelivery, WebhookEndpoint } from "./types";
 
 /** In-memory Db for tests, local dev and stub mode. Same semantics as the Mongo driver (dbContract.ts). */
 export function createMemoryDb(app: string, config: Record<string, string> = {}): Db {
@@ -9,6 +9,7 @@ export function createMemoryDb(app: string, config: Record<string, string> = {})
   const usage = new Map<string, number>();
   const limits = new Map<string, number[]>();
   const audit: AuditEntry[] = [];
+  const uptime: UptimeCheck[] = [];
   const endpoints = new Map<string, WebhookEndpoint>();
   const deliveries = new Map<string, WebhookDelivery>();
   const suppressions = new Map<string, Suppression>();
@@ -59,6 +60,18 @@ export function createMemoryDb(app: string, config: Record<string, string> = {})
       hits.push(now);
       limits.set(key, hits);
       return hits.length;
+    },
+    async recordUptimeCheck(c) {
+      const entry: UptimeCheck = { ...c, id: uuidv7(), app, at: c.at ?? new Date() };
+      uptime.push(clone(entry));
+      return clone(entry);
+    },
+    async listUptimeChecks({ since, target, limit = 5000 }) {
+      return uptime
+        .filter((u) => u.at >= since && (!target || u.target === target))
+        .sort((a, b) => b.at.getTime() - a.at.getTime())
+        .slice(0, limit)
+        .map(clone);
     },
     async appendAudit(e) {
       const entry: AuditEntry = { ...e, id: uuidv7(), app, at: e.at ?? new Date() };

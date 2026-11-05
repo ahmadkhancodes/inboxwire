@@ -22,3 +22,9 @@ Done when: Outlook.com mailbox connects and Graph notification hits `/api/hooks/
 - **Google verification + CASA** for any production Gmail with restricted scopes on OUR app: only if we choose to publish our own app; default policy is customers bring their own client, so skip. If chosen: https://console.cloud.google.com/auth/verification then a lab (Secusy/TAC, AL1 $499-$855 est.).
 - Microsoft publisher verification (only for multi-tenant shared app, v2).
 - VPS handover: IMAP IDLE workers, Postfix/DKIM (DNS: SPF, DKIM, DMARC p=none, MTA-STS, TLS-RPT for buffersoltech.com), port 25 unblocking request to Hetzner/OVH.
+
+## E. Owner values needed (legal copy placeholders)
+The legal pages under `src/content/legal/*` render these placeholders verbatim until you give the real values. Both live in one place: `src/config/product.ts` → `legal.jurisdiction` and `legal.address`.
+- `{{jurisdiction}}`: governing law and courts for the terms (country/state of BufferSol Technologies' registration).
+- `{{registered address}}`: registered business address of BufferSol Technologies, used in the privacy policy, terms and DPA.
+Also confirm before launch: `legal@buffersoltech.com` as the security-report and legal contact, and the 12-month liability cap and transfer wording in `terms.ts`/`dpa.ts` (drafted by us, not reviewed by a lawyer).

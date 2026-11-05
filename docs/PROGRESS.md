@@ -8,6 +8,10 @@
 - **Checks:** lint (1 kit warning), typecheck, 45 unit tests, build, GitHub CI all green. mailcore: 17 tests green (`cd packages/mailcore && npx vitest run`).
 - Kit source: postslot @ 03398f3. Tag kit-v1 now = 35bdaa5 (only KIT_COPY rule text, tag workflow, deploy.sh changed); deploy.sh updated here to match.
 
+## 5 Nov 2026 (M1-C): M1 code done, deploy pending
+- Added `/status` (uptime_checks via Db interface, cron job `uptime-probe`, in wrangler JOBS and a daily Vercel cron), `/casa` (kit landing + client-side calculator), pricing mailbox slider (prices from product.ts + src/config/competitors.ts, dated 3 Nov 2026, Nylas included), legal copy rewritten for Inboxwire (placeholders listed in MANUAL_STEPS section E), screenshots in docs/qa/2026-11-05, docs/design-qa.md (43/50), Playwright e2e in tests/e2e/pages.spec.ts. Fixed mobile header overflow and dead footer link.
+- Checks green: lint (2 existing warnings), typecheck, 56 unit tests, build, 7 e2e. Not deployed (orchestrator deploys). Next: deploy, then M2 (item 5 below). Run `npm run db:indexes` once Mongo is set so `uptime_checks` gets its indexes.
+
 ## Waiting on the orchestrator / owner
 MONGODB_URI (DB `inboxwire`, user `inboxwire-app`), STRIPE_SECRET_KEY_TEST, RESEND_API_KEY, CLOUDFLARE_SAAS_TOKEN + ACCOUNT_ID (custom domain inboxwire.buffersoltech.com, cron worker). Owner-only: docs/MANUAL_STEPS.md (Google Cloud OAuth + Pub/Sub, Entra app).
 New KIT_COPY rule to verify: the primary colour family must not repeat another BufferSol product (orchestrator keeps PALETTE_REGISTRY.md). Inboxwire's accent is amber #F5A524 ("lamp"). Ask the orchestrator to confirm it is free; if not, only the `--accent-500/600` values in globals.css change.

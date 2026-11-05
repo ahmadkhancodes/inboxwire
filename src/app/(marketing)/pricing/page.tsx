@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Section } from "@/components/ui/layout";
 import { PricingTable } from "@/components/marketing/pricing-table";
+import { MailboxSlider } from "@/components/marketing/mailbox-slider";
 import { Faq } from "@/components/marketing/faq";
 import { product } from "@/config/product";
 
@@ -29,6 +30,10 @@ export default function PricingPage() {
       <Section labelledBy="pricing-title">
         <h1 className="sr-only">{title}</h1>
         <PricingTable title="Same core features. About half the price." />
+      </Section>
+      <Section id="calculator" tone="raised" labelledBy="slider-title">
+        <h2 id="slider-title" className="heading-4 md:heading-2 mb-8 text-text md:mb-12">What your mailboxes cost</h2>
+        <MailboxSlider />
       </Section>
       <Faq title="Billing questions" items={billingFaq} />
     </>

@@ -4,7 +4,7 @@ compatibility_date = "2026-10-01"
 
 [vars]
 APP_URL = "https://inboxwire.buffersoltech.com"
-JOBS = "webhook-retries"
+JOBS = "webhook-retries,uptime-probe"
 
 [triggers]
 crons = ["* * * * *"]
