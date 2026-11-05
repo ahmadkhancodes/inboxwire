@@ -10,7 +10,15 @@ import { Field, Input } from "@/components/ui/field";
 import { EmptyState, ErrorState, Notice, Skeleton } from "@/components/ui/states";
 import { authClient } from "@/lib/auth/client";
 
-interface KeyRow { id: string; name: string | null; start: string | null; prefix: string | null; createdAt: string | Date; lastRequest: string | Date | null }
+interface KeyRow { id: string; name: string | null; start: string | null; prefix: string | null; createdAt: string | Date; lastRequest: string | Date | null; metadata?: unknown }
+
+type ScopeChoice = "read" | "send" | "admin";
+const SCOPE_LABEL: Record<ScopeChoice, string> = { read: "Read: list and search mail", send: "Send: read and send mail", admin: "Admin: everything, including webhooks" };
+const scopeOf = (m: unknown): string => {
+  const raw = typeof m === "string" ? (() => { try { return JSON.parse(m) as unknown; } catch { return null; } })() : m;
+  const list = (raw as { scopes?: string[] } | null)?.scopes;
+  return list ? list.join(", ") || "none" : "admin (legacy)";
+};
 
 export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: boolean }) {
   const keys = useAsync<KeyRow[]>(async () => {
@@ -20,6 +28,7 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
     return rows as unknown as KeyRow[];
   }, [orgId]);
   const [name, setName] = useState("");
+  const [scope, setScope] = useState<ScopeChoice>("read");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ name: string; key: string } | null>(null);
@@ -33,7 +42,7 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
     if (!clean) return setError("Name the key after where it will be used, for example Production server.");
     setBusy(true);
     setError(null);
-    const { data, error: err } = await authClient.apiKey.create({ name: clean, organizationId: orgId });
+    const { data, error: err } = await authClient.apiKey.create({ name: clean, organizationId: orgId, metadata: { scopes: scope === "admin" ? ["read", "send", "admin"] : scope === "send" ? ["read", "send"] : ["read"] } });
     setBusy(false);
     if (err || !data) return setError(authError(err, "We could not create the key. Try again."));
     setCreated({ name: clean, key: (data as unknown as { key: string }).key });
@@ -65,6 +74,13 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
                 <Input id="key-name" maxLength={60} placeholder="Production server" value={name} onChange={(e) => setName(e.target.value)} aria-invalid={error ? true : undefined} aria-describedby={error ? "key-name-error" : undefined} />
               </Field>
             </div>
+            <div className="sm:w-72">
+              <Field label="Scope" htmlFor="key-scope">
+                <select id="key-scope" value={scope} onChange={(e) => setScope(e.target.value as ScopeChoice)} className="body-5 min-h-11 w-full rounded-md border border-border-strong bg-surface px-3 text-text focus-visible:focus-ring">
+                  {(Object.keys(SCOPE_LABEL) as ScopeChoice[]).map((k) => <option key={k} value={k}>{SCOPE_LABEL[k]}</option>)}
+                </select>
+              </Field>
+            </div>
             <div className="sm:pt-6">
               <Button type="submit" loading={busy}>Create key</Button>
             </div>
@@ -84,6 +100,7 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
             columns={[
               { key: "name", label: "Name" },
               { key: "key", label: "Key" },
+              { key: "scope", label: "Scope" },
               { key: "created", label: "Created" },
               { key: "used", label: "Last used" },
               { key: "a", label: "Actions", align: "right" },
@@ -93,6 +110,7 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
               <tr key={k.id}>
                 <Td>{k.name || "Unnamed key"}</Td>
                 <Td muted><code>{k.start ?? k.prefix ?? ""}...</code></Td>
+                <Td muted>{scopeOf(k.metadata)}</Td>
                 <Td muted>{formatDate(k.createdAt)}</Td>
                 <Td muted>{formatDate(k.lastRequest)}</Td>
                 <Td align="right">

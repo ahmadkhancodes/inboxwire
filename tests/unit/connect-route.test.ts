@@ -8,7 +8,7 @@ const db = createMemoryDb("inboxwire");
 let authed = true;
 vi.mock("@/lib/db", () => ({ getDb: async () => db }));
 vi.mock("@/lib/auth/session", () => ({
-  authApiKey: async () => { if (!authed) throw new HttpError(401, "invalid_api_key"); return { orgId: "org_route", keyId: "k1" }; },
+  authApiKey: async () => { if (!authed) throw new HttpError(401, "invalid_api_key"); return { orgId: "org_route", keyId: "k1", scopes: ["read", "send", "admin"] }; },
 }));
 
 const post = (body: unknown, headers: Record<string, string> = {}) =>

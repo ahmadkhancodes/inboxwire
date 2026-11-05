@@ -59,6 +59,13 @@ export interface WebhookEndpoint {
   events: string[];
   enabled: boolean;
   createdAt: Date;
+  /** Environment the endpoint belongs to (`/v1` endpoints). Absent on org-wide endpoints from the dashboard kit, which see every environment. */
+  envId?: string | null;
+  /** Start of the current run of failed deliveries; cleared on success. 72 h of this disables the endpoint. */
+  failingSince?: Date | null;
+  /** Set when we disabled the endpoint ourselves. */
+  disabledAt?: Date | null;
+  disabledReason?: string | null;
 }
 
 export type DeliveryStatus = "pending" | "succeeded" | "failed" | "retrying";
@@ -77,6 +84,16 @@ export interface WebhookDelivery {
   lastError: string | null;
   createdAt: Date;
   updatedAt: Date;
+  /** Stable id of the event (the payload `id`); a replay keeps it so receivers can dedupe. Absent on older rows (use `id`). */
+  eventId?: string;
+  envId?: string | null;
+  /** Round trip of the last attempt and the first bytes of the answer, for the delivery log. */
+  lastLatencyMs?: number | null;
+  lastResponseSnippet?: string | null;
+  /** Set on a replay: the delivery it re-sends. */
+  replayOf?: string | null;
+  /** Set once a replay of this delivery was sent (bulk replay skips it). */
+  replayedAt?: Date | null;
   /** TTL: delivery logs expire (Date, not number). */
   expireAt: Date;
 }
@@ -130,7 +147,7 @@ export interface Db extends MailStore {
   createWebhookEndpoint(e: Omit<WebhookEndpoint, "app" | "createdAt">): Promise<WebhookEndpoint>;
   listWebhookEndpoints(orgId: string): Promise<WebhookEndpoint[]>;
   getWebhookEndpoint(orgId: string, id: string): Promise<WebhookEndpoint | null>;
-  updateWebhookEndpoint(orgId: string, id: string, patch: Partial<Pick<WebhookEndpoint, "url" | "events" | "enabled">>): Promise<void>;
+  updateWebhookEndpoint(orgId: string, id: string, patch: Partial<Pick<WebhookEndpoint, "url" | "events" | "enabled" | "failingSince" | "disabledAt" | "disabledReason">>): Promise<void>;
   deleteWebhookEndpoint(orgId: string, id: string): Promise<void>;
   createDelivery(d: Omit<WebhookDelivery, "app">): Promise<void>;
   updateDelivery(id: string, patch: Partial<Omit<WebhookDelivery, "id" | "app" | "orgId">>): Promise<void>;

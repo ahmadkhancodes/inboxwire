@@ -77,7 +77,7 @@ describe("IMAP connect", () => {
     expect(cred?.imapSmtpEnc).toBeTruthy();
     expect(cred!.imapSmtpEnc).not.toContain("s3cret-pass");
     expect(JSON.parse(await openForOrg(db, "org_1", cred!.imapSmtpEnc!)).imap.pass).toBe("s3cret-pass");
-    expect(emit).toHaveBeenCalledWith("org_1", "accountConnected", expect.objectContaining({ accountId: acct!.id }));
+    expect(emit).toHaveBeenCalledWith("org_1", "accountConnected", expect.objectContaining({ accountId: acct!.id }), { envId: acct!.envId });
     expect(await lookupConnectLink(db, token)).toMatchObject({ ok: false, status: 410 });
     await expect(completeImap(db, link, input, { imapFactory: fakeImap({ uidValidity: 1, uidNext: 5, uids: [], connects: 0 }), emit })).rejects.toMatchObject({ status: 410 });
   });

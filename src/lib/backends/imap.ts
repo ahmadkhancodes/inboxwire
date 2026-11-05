@@ -1,4 +1,4 @@
-import type { ChangeEvent, MailBackend, MessageSummary, Page, SendRequest, Watcher } from "@/lib/mailcore";
+import type { AttachmentContent, AttachmentMeta, ChangeEvent, Folder, MailBackend, MessageSummary, Page, SendRequest, Watcher } from "@/lib/mailcore";
 import { search } from "@/lib/mailcore";
 
 export interface ImapSettings { host: string; port: number; secure: boolean; user: string; pass: string }
@@ -16,15 +16,19 @@ export interface ImapClientLike {
   messageFlagsRemove(range: string, flags: string[], o?: { uid?: boolean }): Promise<unknown>;
   messageMove(range: string, dest: string, o?: { uid?: boolean }): Promise<unknown>;
   messageDelete(range: string, o?: { uid?: boolean }): Promise<unknown>;
+  list?(): Promise<{ path: string; name?: string; specialUse?: string }[]>;
+  download?(uid: string, part?: string, o?: { uid?: boolean }): Promise<{ content: AsyncIterable<Buffer | Uint8Array> } | false>;
   idle?(): Promise<unknown>;
 }
+export interface ImapBodyNode { part?: string; type?: string; size?: number; disposition?: string; dispositionParameters?: Record<string, string>; parameters?: Record<string, string>; childNodes?: ImapBodyNode[] }
 export interface FetchedMessage {
-  uid: number; flags?: Set<string>; envelope?: { date?: Date; subject?: string; from?: { name?: string; address?: string }[]; to?: { name?: string; address?: string }[] };
-  source?: Buffer; bodyStructure?: { childNodes?: { disposition?: string }[] };
+  uid: number; flags?: Set<string>; envelope?: { messageId?: string; date?: Date; subject?: string; from?: { name?: string; address?: string }[]; to?: { name?: string; address?: string }[] };
+  source?: Buffer; bodyStructure?: ImapBodyNode;
 }
 
 export type ImapFactory = (s: ImapSettings) => ImapClientLike;
-export type SmtpSend = (req: SendRequest, creds: { user: string; pass: string }) => Promise<{ id: string }>;
+/** Sends one message over SMTP (see ./smtp.ts). */
+export type SmtpSend = (req: SendRequest, threading?: { inReplyTo?: string; references?: string[] }) => Promise<{ id: string }>;
 
 /** Real factory (lazy import keeps imapflow out of non-IMAP bundles). */
 export const imapflowFactory: ImapFactory = (s) => {
@@ -38,12 +42,18 @@ export type ImapCursor = { uidvalidity: string; uidnext: number };
 export const encodeCursor = (c: ImapCursor) => JSON.stringify(c);
 const parseCursor = (s?: string): ImapCursor | null => { try { return s ? (JSON.parse(s) as ImapCursor) : null; } catch { return null; } };
 
+const flatNodes = (n?: ImapBodyNode): ImapBodyNode[] => (n ? [n, ...(n.childNodes ?? []).flatMap(flatNodes)] : []);
+const attachmentNodes = (n?: ImapBodyNode) => flatNodes(n).filter((x) => x.part && !x.childNodes?.length && (x.disposition === "attachment" || (x.disposition === "inline" && x.dispositionParameters?.filename)));
+const nodeMeta = (x: ImapBodyNode): AttachmentMeta => ({
+  id: x.part!, filename: x.dispositionParameters?.filename ?? x.parameters?.name ?? "attachment", contentType: x.type ?? "application/octet-stream", size: x.size ?? 0, inline: x.disposition === "inline",
+});
+
 function toSummary(m: FetchedMessage, folder: string): MessageSummary {
   const a = (x?: { name?: string; address?: string }) => (x?.address ? { name: x.name || undefined, address: x.address } : undefined);
   return {
     id: String(m.uid), folder, date: (m.envelope?.date ?? new Date(0)).toISOString(), from: a(m.envelope?.from?.[0]),
     to: (m.envelope?.to ?? []).map(a).filter((x): x is NonNullable<typeof x> => !!x), subject: m.envelope?.subject ?? "",
-    flags: [...(m.flags ?? [])], hasAttachments: !!m.bodyStructure?.childNodes?.some((n) => n.disposition === "attachment"),
+    flags: [...(m.flags ?? [])], hasAttachments: attachmentNodes(m.bodyStructure).length > 0,
   };
 }
 
@@ -98,9 +108,38 @@ export class ImapBackend implements MailBackend {
   }
   search(q: string) { return this.listMessages({ q }); }
 
+  async folders(): Promise<Folder[]> {
+    const c = await this.c();
+    return ((await c.list?.()) ?? []).map((f) => ({ id: f.path, name: f.name ?? f.path, kind: f.specialUse || f.path.toUpperCase() === "INBOX" ? "system" : "user" }));
+  }
+  async attachments(messageId: string): Promise<AttachmentMeta[]> {
+    const c = await this.c();
+    await c.mailboxOpen(FOLDER, { readOnly: true });
+    const m = await c.fetchOne(messageId, { uid: true, bodyStructure: true }, { uid: true });
+    if (!m) throw new Error("not_found");
+    return attachmentNodes(m.bodyStructure).map(nodeMeta);
+  }
+  async attachment(messageId: string, attachmentId: string): Promise<AttachmentContent> {
+    const meta = (await this.attachments(messageId)).find((a) => a.id === attachmentId);
+    const c = await this.c();
+    const dl = meta && c.download ? await c.download(messageId, attachmentId, { uid: true }) : false;
+    if (!meta || !dl) throw new Error("not_found");
+    const chunks: Buffer[] = [];
+    for await (const ch of dl.content) chunks.push(Buffer.from(ch));
+    return { ...meta, data: Buffer.concat(chunks) };
+  }
+
   async send(req: SendRequest) {
     if (!this.smtp) throw new Error("smtp_not_configured");
-    return this.smtp(req, { user: this.settings.user, pass: this.settings.pass });
+    let threading: { inReplyTo?: string; references?: string[] } | undefined;
+    if (req.replyToMessageId) {
+      const c = await this.c();
+      await c.mailboxOpen(FOLDER, { readOnly: true });
+      const parent = await c.fetchOne(req.replyToMessageId, { uid: true, envelope: true }, { uid: true });
+      const mid = parent ? parent.envelope?.messageId : undefined;
+      if (mid) threading = { inReplyTo: mid, references: [mid] };
+    }
+    return this.smtp(req, threading);
   }
   async modify(id: string, patch: { addFlags?: string[]; removeFlags?: string[]; folder?: string }) {
     const c = await this.c();

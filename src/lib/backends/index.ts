@@ -6,8 +6,12 @@ import { refreshAccessToken } from "@/lib/connect/oauth";
 import { GmailBackend, type GmailLike } from "./gmail";
 import { GraphBackend, type GraphLike } from "./graph";
 import { ImapBackend, imapflowFactory, type ImapFactory, type ImapSettings } from "./imap";
+import { makeSmtpSend, nodemailerFactory, type SmtpSettings, type SmtpTransportFactory } from "./smtp";
 
-export interface BackendDeps { fetchFn?: typeof fetch; imapFactory?: ImapFactory; gmail?: (accessToken: string) => GmailLike; graph?: (accessToken: string) => GraphLike; now?: Date }
+/** Emits a webhook event for an org; `ctx.envId` scopes it to endpoints of that environment. */
+export type Emit = (orgId: string, type: string, data: unknown, ctx?: { envId: string }) => Promise<unknown>;
+
+export interface BackendDeps { fetchFn?: typeof fetch; imapFactory?: ImapFactory; gmail?: (accessToken: string) => GmailLike; graph?: (accessToken: string) => GraphLike; smtp?: SmtpTransportFactory; now?: Date }
 
 const FRESH_MS = 60_000;
 
@@ -18,8 +22,9 @@ export async function backendFor(db: Db, account: MailAccount, deps: BackendDeps
   if (!cred) throw new Error("no_credentials");
   if (account.backend === "imap") {
     if (!cred.imapSmtpEnc) throw new Error("no_credentials");
-    const s = JSON.parse(await openForOrg(db, orgId, cred.imapSmtpEnc)) as { imap: ImapSettings };
-    return new ImapBackend(s.imap, deps.imapFactory ?? imapflowFactory);
+    const s = JSON.parse(await openForOrg(db, orgId, cred.imapSmtpEnc)) as { imap: ImapSettings; smtp?: SmtpSettings };
+    const smtp = s.smtp ? makeSmtpSend(s.smtp, account.email, deps.smtp ?? nodemailerFactory) : undefined;
+    return new ImapBackend(s.imap, deps.imapFactory ?? imapflowFactory, smtp);
   }
   const provider = account.backend === "gmail_api" ? "google" : "microsoft";
   let access = cred.accessTokenEnc ? await openForOrg(db, orgId, cred.accessTokenEnc) : "";
@@ -38,7 +43,7 @@ export async function backendFor(db: Db, account: MailAccount, deps: BackendDeps
     return new GmailBackend(gmail, { email: account.email, topic: client?.pubsubTopic, pollMode: account.mode === "polling" });
   }
   const graph = deps.graph ? deps.graph(access) : await realGraph(access);
-  return new GraphBackend(graph, { notificationUrl: account.mode === "push" ? `${appUrl()}/api/hooks/graph/${account.envId}` : undefined, clientState: hookToken(account.envId) });
+  return new GraphBackend(graph, { notificationUrl: account.mode === "push" ? `${appUrl()}/api/hooks/graph/${account.envId}` : undefined, clientState: hookToken(account.envId), subscriptionId: account.watch?.id });
 }
 
 async function realGmail(token: string): Promise<GmailLike> {
@@ -57,7 +62,7 @@ async function realGraph(token: string): Promise<GraphLike> {
 export interface SyncOutcome { accountId: string; events: number; ok: boolean; error?: string }
 
 /** Runs one sync for an account: loads the cursor, syncs, stores the new cursor, emits webhook events, schedules the next poll. */
-export async function syncAccount(db: Db, accountId: string, deps: BackendDeps & { emit?: (orgId: string, type: string, data: unknown) => Promise<unknown>; pollEveryMs?: number } = {}): Promise<SyncOutcome> {
+export async function syncAccount(db: Db, accountId: string, deps: BackendDeps & { emit?: Emit; pollEveryMs?: number } = {}): Promise<SyncOutcome> {
   const account = await db.getAccount(accountId);
   if (!account) return { accountId, events: 0, ok: false, error: "not_found" };
   const now = deps.now ?? new Date();
@@ -71,8 +76,8 @@ export async function syncAccount(db: Db, accountId: string, deps: BackendDeps &
     const r = await backend.sync(cursorValue ?? undefined);
     await db.setCursor(storeCursor(account, folder, r.cursor));
     const orgId = await orgOfEnv(db, account.envId);
-    const emit = deps.emit ?? (async (o: string, t: string, d: unknown) => (await import("@/lib/webhooks/outbound")).emitEvent(o, t, d, { db }));
-    for (const e of r.events) await emit(orgId, e.type, { accountId, ...eventData(e) });
+    const emit: Emit = deps.emit ?? (async (o, t, d, c) => (await import("@/lib/webhooks/outbound")).emitEvent(o, t, d, { db, envId: c?.envId }));
+    for (const e of r.events) await emit(orgId, e.type, { accountId, ...eventData(e) }, { envId: account.envId });
     await db.updateAccount(accountId, { state: "connected", lastError: null, nextPollAt: account.mode === "polling" ? next : null });
     return { accountId, events: r.events.length, ok: true };
   } catch (e) {

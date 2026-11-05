@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db";
 import type { Db } from "@/lib/db/types";
-import { syncAccount, type BackendDeps } from "@/lib/backends";
+import { syncAccount, type BackendDeps, type Emit } from "@/lib/backends";
 
 export interface PollOptions extends BackendDeps {
   db?: Db;
@@ -9,7 +9,7 @@ export interface PollOptions extends BackendDeps {
   budgetMs?: number;
   /** Shard i of n by account id hash so parallel cron invocations never overlap. */
   shard?: { index: number; total: number };
-  emit?: (orgId: string, type: string, data: unknown) => Promise<unknown>;
+  emit?: Emit;
   pollEveryMs?: number;
 }
 

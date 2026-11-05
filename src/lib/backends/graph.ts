@@ -1,4 +1,4 @@
-import type { ChangeEvent, MailBackend, MessageSummary, Page, SendRequest, Watcher } from "@/lib/mailcore";
+import type { AttachmentContent, AttachmentMeta, ChangeEvent, Folder, MailBackend, MessageSummary, Page, SendRequest, Watcher } from "@/lib/mailcore";
 import { search } from "@/lib/mailcore";
 
 /** The slice of @microsoft/microsoft-graph-client we use (`client.api(path).get()` etc.). */
@@ -32,7 +32,7 @@ const rcpt = (a: { name?: string; address: string }) => ({ emailAddress: { addre
 
 export class GraphBackend implements MailBackend {
   readonly backend = "graph" as const;
-  constructor(private client: GraphLike, private opts: { notificationUrl?: string; clientState?: string; onSubscription?: (s: { id: string; expiresAt: Date }) => Promise<void> } = {}) {}
+  constructor(private client: GraphLike, private opts: { notificationUrl?: string; clientState?: string; subscriptionId?: string | null } = {}) {}
 
   async connect() { await this.client.api("/me?$select=id").get(); }
 
@@ -52,9 +52,28 @@ export class GraphBackend implements MailBackend {
   }
 
   async listMessages(o: { folder?: string; q?: string; cursor?: string; limit?: number }): Promise<Page<MessageSummary>> {
+    if (o.cursor && !o.cursor.startsWith("https://graph.microsoft.com/")) throw new Error("invalid_cursor");
     const base = o.cursor ?? `/me/${o.folder ? `mailFolders/${encodeURIComponent(o.folder)}/` : ""}messages?${SELECT}&$top=${Math.min(o.limit ?? 25, 100)}${o.q ? `&${graphQuery(o.q)}` : "&$orderby=receivedDateTime desc"}`;
     const page = await this.client.api(base).get();
     return { items: (page.value ?? []).map(toSummary), nextCursor: page["@odata.nextLink"] };
+  }
+  async folders(): Promise<Folder[]> {
+    const SYSTEM = new Set(["inbox", "drafts", "sent items", "deleted items", "junk email", "archive", "outbox"]);
+    const page = await this.client.api("/me/mailFolders?$top=100&$select=id,displayName,unreadItemCount,totalItemCount").get();
+    return (page.value ?? []).map((f: { id: string; displayName?: string; unreadItemCount?: number; totalItemCount?: number }) => ({
+      id: f.id, name: f.displayName ?? f.id, kind: SYSTEM.has((f.displayName ?? "").toLowerCase()) ? "system" : "user", unread: f.unreadItemCount, total: f.totalItemCount,
+    }));
+  }
+  async attachments(messageId: string): Promise<AttachmentMeta[]> {
+    const page = await this.client.api(`/me/messages/${encodeURIComponent(messageId)}/attachments?$select=id,name,contentType,size,isInline`).get();
+    return (page.value ?? []).map((a: { id: string; name?: string; contentType?: string; size?: number; isInline?: boolean }) => ({
+      id: a.id, filename: a.name ?? "attachment", contentType: a.contentType ?? "application/octet-stream", size: a.size ?? 0, inline: !!a.isInline,
+    }));
+  }
+  async attachment(messageId: string, attachmentId: string): Promise<AttachmentContent> {
+    const a = await this.client.api(`/me/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`).get();
+    if (!a?.contentBytes) throw new Error("not_found");
+    return { id: a.id, filename: a.name ?? "attachment", contentType: a.contentType ?? "application/octet-stream", size: a.size ?? 0, inline: !!a.isInline, data: Buffer.from(a.contentBytes, "base64") };
   }
   async getMessage(id: string, format: "json" | "raw") {
     if (format === "raw") return this.client.api(`/me/messages/${id}/$value`).get();
@@ -87,21 +106,31 @@ export class GraphBackend implements MailBackend {
   }
   async remove(id: string) { await this.client.api(`/me/messages/${id}`).delete(); }
 
-  /** Change notifications to /api/hooks/graph/<envId>; subscriptions last < 3 days and are renewed by cron. */
+  /** Change notifications to /api/hooks/graph/<envId>; subscriptions last < 3 days. With a stored subscription id `start` renews it in place (a gone subscription is recreated). */
   watch(): Watcher {
     const url = this.opts.notificationUrl;
-    let subId: string | null = null;
+    let subId: string | null = this.opts.subscriptionId ?? null;
+    const expiration = () => new Date(Date.now() + 4200 * 60_000);
     return {
       mode: url ? "push" : "poll",
       start: async () => {
         if (!url) return;
-        const expiration = new Date(Date.now() + 4200 * 60_000);
+        if (subId) {
+          try {
+            const exp = expiration();
+            const s = await this.client.api(`/subscriptions/${subId}`).patch({ expirationDateTime: exp.toISOString() });
+            return { id: subId, expiresAt: new Date(s?.expirationDateTime ?? exp) };
+          } catch (e) {
+            if ((e as { statusCode?: number }).statusCode !== 404) throw e;
+          }
+        }
+        const exp = expiration();
         const s = await this.client.api("/subscriptions").post({
           changeType: "created,updated,deleted", notificationUrl: url, lifecycleNotificationUrl: url, resource: "/me/mailFolders('inbox')/messages",
-          expirationDateTime: expiration.toISOString(), clientState: this.opts.clientState,
+          expirationDateTime: exp.toISOString(), clientState: this.opts.clientState,
         });
         subId = s.id;
-        await this.opts.onSubscription?.({ id: s.id, expiresAt: new Date(s.expirationDateTime ?? expiration) });
+        return { id: s.id as string, expiresAt: new Date(s.expirationDateTime ?? exp) };
       },
       stop: async () => { if (subId) await this.client.api(`/subscriptions/${subId}`).delete(); },
     };

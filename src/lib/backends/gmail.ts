@@ -1,4 +1,4 @@
-import type { ChangeEvent, MailBackend, MessageSummary, Page, SendRequest, Watcher } from "@/lib/mailcore";
+import type { AttachmentContent, AttachmentMeta, ChangeEvent, Folder, MailBackend, MessageSummary, Page, SendRequest, Watcher } from "@/lib/mailcore";
 import { search } from "@/lib/mailcore";
 import { buildRfc822 } from "./mime";
 
@@ -11,9 +11,11 @@ export interface GmailLike {
       list(p: Record<string, unknown>): Promise<{ data: { messages?: { id?: string | null }[]; nextPageToken?: string | null } }>;
       get(p: Record<string, unknown>): Promise<{ data: GmailMessage }>;
       send(p: Record<string, unknown>): Promise<{ data: { id?: string | null; threadId?: string | null } }>;
+      attachments: { get(p: Record<string, unknown>): Promise<{ data: { data?: string | null; size?: number | null } }> };
       modify(p: Record<string, unknown>): Promise<unknown>;
       trash(p: Record<string, unknown>): Promise<unknown>;
     };
+    labels: { list(p: { userId: "me" }): Promise<{ data: { labels?: { id?: string | null; name?: string | null; type?: string | null }[] } }> };
     watch(p: Record<string, unknown>): Promise<{ data: { historyId?: string | null; expiration?: string | null } }>;
     stop(p: { userId: "me" }): Promise<unknown>;
   };
@@ -26,8 +28,10 @@ interface GmailHistory {
 }
 interface GmailMessage {
   id?: string | null; threadId?: string | null; labelIds?: string[] | null; internalDate?: string | null; raw?: string | null;
-  payload?: { headers?: { name?: string | null; value?: string | null }[]; parts?: { filename?: string | null }[] } | null;
+  payload?: { headers?: { name?: string | null; value?: string | null }[]; parts?: GmailPart[] } | null;
 }
+interface GmailPart { filename?: string | null; mimeType?: string | null; headers?: { name?: string | null; value?: string | null }[]; body?: { attachmentId?: string | null; size?: number | null } | null; parts?: GmailPart[] }
+const flatParts = (parts: GmailPart[] = []): GmailPart[] => parts.flatMap((p) => [p, ...flatParts(p.parts)]);
 
 const parseAddr = (s?: string): { name?: string; address: string }[] =>
   (s ?? "").split(",").map((p) => p.trim()).filter(Boolean).map((p) => {
@@ -42,7 +46,7 @@ export function toSummary(m: GmailMessage): MessageSummary {
   return {
     id: m.id ?? "", threadId: m.threadId ?? undefined, folder: labels.includes("INBOX") ? "INBOX" : labels.find((l) => !["UNREAD", "STARRED", "IMPORTANT"].includes(l)) ?? "ALL",
     date: new Date(Number(m.internalDate ?? Date.now())).toISOString(), from: parseAddr(h("from"))[0], to: parseAddr(h("to")),
-    subject: h("subject") ?? "", flags, hasAttachments: !!m.payload?.parts?.some((p) => p.filename),
+    subject: h("subject") ?? "", flags, hasAttachments: flatParts(m.payload?.parts).some((p) => !!p.filename),
   };
 }
 
@@ -82,6 +86,23 @@ export class GmailBackend implements MailBackend {
     const items = await Promise.all((data.messages ?? []).map(async (m) => toSummary((await this.gmail.users.messages.get({ userId: "me", id: m.id, format: "metadata", metadataHeaders: ["From", "To", "Subject"] })).data)));
     return { items, nextCursor: data.nextPageToken ?? undefined };
   }
+  async folders(): Promise<Folder[]> {
+    const { data } = await this.gmail.users.labels.list({ userId: "me" });
+    return (data.labels ?? []).filter((l) => l.id).map((l) => ({ id: l.id!, name: l.name ?? l.id!, kind: l.type === "user" ? "user" : "system" }));
+  }
+  async attachments(messageId: string): Promise<AttachmentMeta[]> {
+    const { data } = await this.gmail.users.messages.get({ userId: "me", id: messageId, format: "full" });
+    return flatParts(data.payload?.parts).filter((p) => p.filename && p.body?.attachmentId).map((p) => ({
+      id: p.body!.attachmentId!, filename: p.filename!, contentType: p.mimeType ?? "application/octet-stream", size: p.body?.size ?? 0,
+      inline: /inline/i.test(p.headers?.find((h) => h.name?.toLowerCase() === "content-disposition")?.value ?? ""),
+    }));
+  }
+  async attachment(messageId: string, attachmentId: string): Promise<AttachmentContent> {
+    const meta = (await this.attachments(messageId)).find((a) => a.id === attachmentId);
+    if (!meta) throw new Error("not_found");
+    const { data } = await this.gmail.users.messages.attachments.get({ userId: "me", messageId, id: attachmentId });
+    return { ...meta, data: Buffer.from(data.data ?? "", "base64url") };
+  }
   async getMessage(id: string, format: "json" | "raw") {
     const { data } = await this.gmail.users.messages.get({ userId: "me", id, format: format === "raw" ? "raw" : "full" });
     return format === "raw" ? Buffer.from(data.raw ?? "", "base64url") : { ...toSummary(data), payload: data.payload };
@@ -116,7 +137,11 @@ export class GmailBackend implements MailBackend {
     const push = !!topic && !this.opts.pollMode;
     return {
       mode: push ? "push" : "poll",
-      start: async () => { if (push) await this.gmail.users.watch({ userId: "me", requestBody: { topicName: topic, labelIds: ["INBOX"] } }); },
+      start: async () => {
+        if (!push) return;
+        const { data } = await this.gmail.users.watch({ userId: "me", requestBody: { topicName: topic, labelIds: ["INBOX"] } });
+        return { id: null, expiresAt: data.expiration ? new Date(Number(data.expiration)) : null };
+      },
       stop: async () => { if (push) await this.gmail.users.stop({ userId: "me" }); },
     };
   }

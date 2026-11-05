@@ -37,7 +37,7 @@ export interface MailAccount {
   nextPollAt: Date | null;
   mode: "push" | "polling";
   /** Provider push subscription (Gmail watch / Graph subscription), renewed by cron. */
-  watch?: { id: string | null; expiresAt: Date | null } | null;
+  watch?: { id: string | null; expiresAt: Date | null; /** Do not retry a failed renewal before this time. */ retryAt?: Date | null } | null;
   createdAt: Date;
 }
 
@@ -79,6 +79,32 @@ export interface ConnectLink {
   oauth?: { stateHash: string; verifier: string; provider: OAuthProvider; email?: string | null } | null;
 }
 
+export type OutboxStatus = "queued" | "sending" | "sent" | "failed";
+
+/** A queued send. Unique (accountId, idempotencyKey); kept 7 days (`expireAt` TTL). The request payload is envelope-encrypted and dropped once the item is terminal. */
+export interface OutboxItem {
+  id: string;
+  app: string;
+  envId: string;
+  accountId: string;
+  idempotencyKey: string;
+  /** sha256 of the canonical request, so a reused key with a different body is rejected. */
+  requestHash: string;
+  status: OutboxStatus;
+  attempts: number;
+  sendAt: Date;
+  /** Next time a worker may pick this up (also the lease end while `sending`). */
+  nextAttemptAt: Date | null;
+  payloadEnc: string | null;
+  result: { id: string; threadId?: string } | null;
+  error: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  expireAt: Date;
+}
+
+export const OUTBOX_RETENTION_MS = 7 * 86_400_000;
+
 export interface OrgKey { orgId: string; app: string; wrappedDek: string; createdAt: Date }
 
 export interface MailStore {
@@ -103,6 +129,8 @@ export interface MailStore {
   updateAccount(id: string, patch: Partial<Omit<MailAccount, "id" | "app" | "envId">>): Promise<void>;
   /** Accounts in polling mode that are due (state not authenticationError), oldest first. */
   dueAccounts(now: Date, limit: number): Promise<MailAccount[]>;
+  /** Push accounts whose provider watch/subscription expires at or before `before` (state not authenticationError), soonest first. */
+  renewableAccounts(before: Date, limit: number): Promise<MailAccount[]>;
   // credentials + cursors
   setCredentials(c: Omit<AccountCredential, "app" | "updatedAt">): Promise<void>;
   getCredentials(accountId: string): Promise<AccountCredential | null>;
@@ -115,6 +143,14 @@ export interface MailStore {
   setConnectLinkOAuth(id: string, oauth: ConnectLink["oauth"]): Promise<void>;
   /** Atomic single use: true only for the first caller while unexpired. */
   consumeConnectLink(id: string, now: Date): Promise<boolean>;
+  // outbox (send queue + Idempotency-Key)
+  /** Insert-if-absent on (accountId, idempotencyKey). `created` is false when the key already existed (the existing item is returned). */
+  insertOutbox(o: Omit<OutboxItem, "app">): Promise<{ item: OutboxItem; created: boolean }>;
+  getOutbox(envId: string, id: string): Promise<OutboxItem | null>;
+  updateOutbox(id: string, patch: Partial<Omit<OutboxItem, "id" | "app" | "envId" | "accountId">>): Promise<void>;
+  /** Atomic claim: queued (or a `sending` item whose lease ended) with nextAttemptAt <= now becomes `sending`, attempts+1, lease until now+leaseMs. Null when someone else got it. */
+  claimOutbox(id: string, now: Date, leaseMs: number): Promise<OutboxItem | null>;
+  dueOutbox(now: Date, limit: number): Promise<OutboxItem[]>;
   /** Removes environments, accounts, credentials, cursors, links, clients for an org. */
   deleteMailData(orgId: string): Promise<void>;
 }
