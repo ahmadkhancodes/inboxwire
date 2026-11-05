@@ -1,3 +1,4 @@
+import { createMemoryMailStore } from "./memory-mail";
 import { uuidv7 } from "@/lib/ids";
 import type { UptimeCheck, AuditEntry, BillingAccount, Db, Entitlement, Suppression, WebhookDelivery, WebhookEndpoint } from "./types";
 
@@ -17,7 +18,10 @@ export function createMemoryDb(app: string, config: Record<string, string> = {})
   const clone = <T>(x: T): T => structuredClone(x);
   const sKey = (email: string, scope = "all") => `${email.toLowerCase()}|${scope}`;
 
+  const mail = createMemoryMailStore(app);
+
   return {
+    ...mail,
     app,
     async getBillingAccount(id) {
       const a = accounts.get(id);
@@ -159,6 +163,7 @@ export function createMemoryDb(app: string, config: Record<string, string> = {})
       for (const [k] of usage) if (k.startsWith(`${orgId}|`)) usage.delete(k);
       for (const [k, e] of endpoints) if (e.orgId === orgId) endpoints.delete(k);
       for (const [k, d] of deliveries) if (d.orgId === orgId) deliveries.delete(k);
+      await mail.deleteMailData(orgId);
       // The audit log is append-only: entries are kept (no PII beyond ids) per the privacy policy.
     },
   };

@@ -1,7 +1,7 @@
 "use client";
 import { hardNavigate } from "./api";
 import {
-  ClipboardText, CreditCard, Gauge, Key, List, ShieldCheck, SignOut, SquaresFour, User, UsersThree, WebhooksLogo, X,
+  ClipboardText, CreditCard, Gauge, Key, List, PlugsConnected, ShieldCheck, SignOut, SquaresFour, User, UsersThree, WebhooksLogo, X,
 } from "@phosphor-icons/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -20,6 +20,7 @@ const SETTINGS: NavItem[] = [
   { href: "/app/settings/security", label: "Security", icon: ShieldCheck },
   { href: "/app/settings/members", label: "Members", icon: UsersThree },
   { href: "/app/settings/api-keys", label: "API keys", icon: Key },
+  { href: "/app/settings/oauth-clients", label: "OAuth clients", icon: PlugsConnected },
   { href: "/app/billing", label: "Billing", icon: CreditCard },
   { href: "/app/settings/webhooks", label: "Webhooks", icon: WebhooksLogo },
   { href: "/app/settings/audit", label: "Audit log", icon: ClipboardText },

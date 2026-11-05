@@ -1,4 +1,5 @@
 import { MongoClient, type Collection, type Db as MongoDatabase, type Document } from "mongodb";
+import { createMongoMailStore, ensureMailIndexes } from "./mongo-mail";
 import { uuidv7 } from "@/lib/ids";
 import { DELIVERY_TTL_DAYS, UPTIME_TTL_DAYS, type UptimeCheck, type AuditEntry, type BillingAccount, type Db, type Entitlement, type Suppression, type WebhookDelivery, type WebhookEndpoint } from "./types";
 
@@ -31,7 +32,10 @@ export function createMongoDb(uri: string, dbName: string, app: string): Db {
     return rest as T;
   };
 
+  const mail = createMongoMailStore(db, app);
+
   return {
+    ...mail,
     app,
     async getBillingAccount(id) {
       return strip<BillingAccount>(await (await col<WithId<BillingAccount>>("billing_accounts")).findOne({ _id: id, app }));
@@ -212,6 +216,7 @@ export function createMongoDb(uri: string, dbName: string, app: string): Db {
       await d.collection("usage").deleteMany({ app, orgId });
       await d.collection("webhook_endpoints").deleteMany({ app, orgId });
       await d.collection("webhook_deliveries").deleteMany({ app, orgId });
+      await mail.deleteMailData(orgId);
     },
   };
 }
@@ -231,6 +236,7 @@ export async function ensureIndexes(uri: string, dbName: string) {
   await d.collection("uptime_checks").createIndex({ app: 1, target: 1, at: -1 });
   await d.collection("uptime_checks").createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 });
   await d.collection("suppressions").createIndex({ app: 1, email: 1 });
+  await ensureMailIndexes(d);
   // Better Auth collections
   await d.collection("user").createIndex({ email: 1 }, { unique: true });
   await d.collection("session").createIndex({ token: 1 }, { unique: true });
