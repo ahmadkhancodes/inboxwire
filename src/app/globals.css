@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+/*
+ * Universal kit tokens (docs/factory/DESIGN_PLAYBOOK.md §3, §5, §6).
+ * PLACEHOLDER THEME: deliberately plain greys + one muted accent. Each product replaces ONLY the
+ * values in the two `:root` blocks below (from its docs/DESIGN.md). Components reference role tokens only.
+ */
+:root {
+  --font-sans-family: var(--font-kit-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display-family: var(--font-kit-display), var(--font-kit-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono-family: var(--font-kit-mono), ui-monospace, monospace;
+
+  /* raw ramp: warm-green neutrals (docs/DESIGN.md) */
+  --n-0: #ffffff;
+  --n-50: #fafbf8;
+  --n-100: #f1f4f0;
+  --n-200: #d5dbd6;
+  --n-300: #b5beb8;
+  --n-400: #8a948e;
+  --n-500: #66706b;
+  --n-600: #5b6560;
+  --n-700: #3e4743;
+  --n-800: #272d2a;
+  --n-900: #16191c;
+  --n-1000: #0f1211;
+  --accent-500: #f5a524; /* lamp */
+  --accent-600: #e08f0b; /* lamp hover */
+
+  /* role tokens: light */
+  --surface: var(--n-50);
+  --surface-raised: var(--n-0);
+  --surface-sunken: var(--n-100);
+  --surface-inverse: var(--n-900);
+  --text: var(--n-900);
+  --text-subtle: var(--n-600);
+  --text-muted: var(--n-500);
+  --text-inverse: var(--n-50);
+  --border: var(--n-200);
+  --border-strong: var(--n-300);
+  --action: var(--accent-500);
+  --action-hover: var(--accent-600);
+  --action-text: #16191c; /* ink on amber 8.6:1, never white */
+  --focus: #16191c;
+  --cable: #2459a6;
+  --tape: #fffdf4;
+  --success: #157a41;
+  --success-surface: #e6f3ea;
+  --warning: #9a4a06;
+  --warning-surface: #fbeede;
+  --danger: #c42b2b;
+  --danger-surface: #fbeaea;
+  --hero-from: #16191c;
+  --hero-to: #5b6560;
+  --shadow-color: 0 0% 0%;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --surface: #0f1211;
+  --surface-raised: #181c1b;
+  --surface-sunken: #1f2423;
+  --surface-inverse: #e7ece8;
+  --text: #e7ece8;
+  --text-subtle: #9aa59f;
+  --text-muted: #8a948e;
+  --text-inverse: #0f1211;
+  --border: #2a302e;
+  --border-strong: #3a4240;
+  --action: #f5a524;
+  --action-hover: #ffb940;
+  --action-text: #16191c;
+  --focus: #f5a524;
+  --cable: #7fb0f5;
+  --tape: #1d221f;
+  --success: #3dd68c;
+  --success-surface: #112a1d;
+  --warning: #ffb940;
+  --warning-surface: #2b2110;
+  --danger: #ff7a7a;
+  --danger-surface: #2e1616;
+  --hero-from: #e7ece8;
+  --hero-to: #9aa59f;
+  --shadow-color: 0 0% 0%;
+  color-scheme: dark;
+}
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --font-sans: var(--font-sans-family);
+  --font-mono: var(--font-mono-family);
+  --font-display: var(--font-display-family);
+
+  /* Square-ish switchboard hardware: radius 2/4/8, round only for lamps and toggles. */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-2xl: 8px;
+  --radius-3xl: 8px;
+
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-inverse: var(--surface-inverse);
+  --color-text: var(--text);
+  --color-text-subtle: var(--text-subtle);
+  --color-text-muted: var(--text-muted);
+  --color-text-inverse: var(--text-inverse);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
+  --color-action-text: var(--action-text);
+  --color-focus: var(--focus);
+  --color-cable: var(--cable);
+  --color-tape: var(--tape);
+  --color-success: var(--success);
+  --color-success-surface: var(--success-surface);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-danger: var(--danger);
+  --color-danger-surface: var(--danger-surface);
+
+  /* Spacing restricted to the playbook scale: 0 2 4 8 12 16 24 32 40 48 64 80 96 (+ layout widths). */
+  --spacing-*: initial;
+  --spacing: initial;
+  --spacing-0: 0px;
+  --spacing-px: 1px;
+  --spacing-0\.5: 2px;
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-11: 44px; /* min tap target */
+  --spacing-12: 48px;
+  --spacing-16: 64px;
+  --spacing-20: 80px;
+  --spacing-24: 96px;
+
+  --ease-out-kit: cubic-bezier(0.22, 1, 0.36, 1);
+  --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  --default-transition-duration: 300ms;
+}
+
+/* ---- Named type styles (playbook §5). Use these, never loose size+weight pairs. ---- */
+@utility heading-1 { font-family: var(--font-display-family); font-size: 3.75rem; line-height: 1; font-weight: 800; letter-spacing: -0.02em; text-wrap: balance; }
+@utility heading-2 { font-family: var(--font-display-family); font-size: 3rem; line-height: 1; font-weight: 800; letter-spacing: -0.02em; text-wrap: balance; }
+@utility heading-3 { font-family: var(--font-display-family); font-size: 2.25rem; line-height: 2.5rem; font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; }
+@utility heading-4 { font-family: var(--font-display-family); font-size: 1.875rem; line-height: 2.25rem; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
+@utility heading-5 { font-family: var(--font-display-family); font-size: 1.5rem; line-height: 2rem; font-weight: 600; text-wrap: balance; }
+@utility heading-6 { font-family: var(--font-display-family); font-size: 1.25rem; line-height: 1.75rem; font-weight: 600; text-wrap: balance; }
+@utility title-1 { font-size: 1.25rem; line-height: 1.75rem; font-weight: 500; }
+@utility title-2 { font-size: 1.125rem; line-height: 1.75rem; font-weight: 500; }
+@utility title-3 { font-size: 1rem; line-height: 1.5rem; font-weight: 500; }
+@utility title-4 { font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; }
+@utility title-5 { font-size: 0.75rem; line-height: 1rem; font-weight: 500; }
+@utility body-1 { font-size: 1rem; line-height: 1.5rem; font-weight: 600; text-wrap: pretty; }
+@utility body-2 { font-size: 1rem; line-height: 1.5rem; font-weight: 500; text-wrap: pretty; }
+@utility body-3 { font-size: 1rem; line-height: 1.5rem; font-weight: 400; text-wrap: pretty; }
+@utility body-4 { font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; text-wrap: pretty; }
+@utility body-5 { font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; text-wrap: pretty; }
+@utility body-6 { font-size: 0.875rem; line-height: 1.25rem; font-weight: 400; text-wrap: pretty; }
+@utility button-lg { font-size: 1.125rem; line-height: 1.75rem; font-weight: 600; }
+@utility button-md { font-size: 1rem; line-height: 1.5rem; font-weight: 600; }
+@utility button-sm { font-size: 0.875rem; line-height: 1.25rem; font-weight: 600; }
+@utility button-xsm { font-size: 0.75rem; line-height: 1rem; font-weight: 600; }
+@utility caption-1 { font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; }
+@utility caption-2 { font-size: 0.875rem; line-height: 1.25rem; font-weight: 400; }
+@utility caption-3 { font-size: 0.75rem; line-height: 1rem; font-weight: 600; }
+@utility caption-4 { font-size: 0.75rem; line-height: 1rem; font-weight: 500; }
+@utility caption-5 { font-size: 0.75rem; line-height: 1rem; font-weight: 400; }
+
+/* The only gradient allowed (playbook §6): hero heading text, left to right. */
+@utility hero-gradient-text {
+  background-image: linear-gradient(to right, var(--hero-from), var(--hero-to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility focus-ring {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--surface);
+    color: var(--text);
+    font-family: var(--font-sans-family);
+        -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  ::selection { background: var(--action); color: var(--action-text); }
+  code, kbd, pre, samp { font-family: var(--font-mono-family); }
+}
+
+/* Scroll reveal (rise 32px + fade, once). Reduced motion: opacity only. */
+.kit-reveal { opacity: 0; transform: translateY(32px); transition: opacity 700ms var(--ease-out-kit), transform 700ms var(--ease-out-kit); }
+.kit-reveal[data-visible="true"] { opacity: 1; transform: none; }
+.kit-word { opacity: 0.3; transition: opacity 500ms var(--ease-out-kit); }
+.kit-word[data-on="true"] { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .kit-reveal { transform: none; transition: opacity 300ms var(--ease-out-kit); }
+  .kit-word { opacity: 1; transition: none; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
