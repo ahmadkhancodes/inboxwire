@@ -15,3 +15,4 @@ Standing decisions are in docs/factory/BATCH1_PLAN.md (Mongo instead of Postgres
 - Meters: mailboxes, environments, seats, log_days, events. Assumptions not in the brief: Developer tier delivery-log retention 7 days; seats 3/3/10 (internal limits, not marketed).
 - Landing follows docs/SECTION_PLAN.md; no testimonial/case-study block until a real design partner exists.
 - Wordmark: "Inboxwire" + amber "by BufferSol" jack tab (brand/wordmark.tsx).
+- 5 Nov (wind-up): extra-mailbox price is a licensed per-unit price (quantity = overage mailboxes) instead of a Stripe meter, for simplicity; revisit if proration needs change. Vercel env `DB_DRIVER=memory` is informational only (the kit picks memory when MONGODB_URI is absent). Accent amber pending PALETTE_REGISTRY check.
