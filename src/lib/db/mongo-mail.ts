@@ -1,6 +1,6 @@
 import type { Collection, Db as MongoDatabase, Document } from "mongodb";
 import { uuidv7 } from "@/lib/ids";
-import type { AccountCredential, ConnectLink, Environment, MailAccount, MailStore, OAuthClient, OrgKey, SyncCursor } from "./mail-types";
+import type { AccountCredential, ConnectLink, Environment, MailAccount, MailStore, OAuthClient, OrgKey, OutboxItem, SyncCursor } from "./mail-types";
 
 type WithId<T> = T & { _id: string };
 
@@ -60,6 +60,11 @@ export function createMongoMailStore(getDb: () => Promise<MongoDatabase>, app: s
         .find({ app, mode: "polling", state: { $ne: "authenticationError" }, nextPollAt: { $lte: now } })
         .sort({ nextPollAt: 1 }).limit(limit).toArray());
     },
+    async renewableAccounts(before, limit) {
+      return stripAll<MailAccount>(await (await col<WithId<MailAccount>>("accounts"))
+        .find({ app, mode: "push", state: { $ne: "authenticationError" }, "watch.expiresAt": { $lte: before } })
+        .sort({ "watch.expiresAt": 1 }).limit(limit).toArray());
+    },
     async setCredentials(c) { await (await col<WithId<AccountCredential>>("account_credentials")).replaceOne({ _id: c.accountId }, { ...c, app, updatedAt: new Date() }, { upsert: true }); },
     async getCredentials(id) { return strip<AccountCredential>(await (await col<WithId<AccountCredential>>("account_credentials")).findOne({ _id: id, app })); },
     async setCursor(c) { await (await col<WithId<SyncCursor>>("sync_cursors")).replaceOne({ _id: `${c.accountId}|${c.folder}` }, { ...c, app, updatedAt: new Date() }, { upsert: true }); },
@@ -79,6 +84,28 @@ export function createMongoMailStore(getDb: () => Promise<MongoDatabase>, app: s
       );
       return r.modifiedCount === 1;
     },
+    async insertOutbox(o) {
+      const c = await col<WithId<OutboxItem>>("outbox");
+      const item: OutboxItem = { ...o, app };
+      try { await c.insertOne({ _id: item.id, ...item }); return { item, created: true }; } catch (err) {
+        if (!dupKey(err)) throw err;
+        return { item: strip<OutboxItem>(await c.findOne({ app, accountId: o.accountId, idempotencyKey: o.idempotencyKey }))!, created: false };
+      }
+    },
+    async getOutbox(envId, id) { return strip<OutboxItem>(await (await col<WithId<OutboxItem>>("outbox")).findOne({ _id: id, app, envId })); },
+    async updateOutbox(id, patch) { await (await col<WithId<OutboxItem>>("outbox")).updateOne({ _id: id, app }, { $set: patch }); },
+    async claimOutbox(id, now, leaseMs) {
+      const r = await (await col<WithId<OutboxItem>>("outbox")).findOneAndUpdate(
+        { _id: id, app, status: { $in: ["queued", "sending"] }, nextAttemptAt: { $lte: now } },
+        { $set: { status: "sending", nextAttemptAt: new Date(now.getTime() + leaseMs), updatedAt: now }, $inc: { attempts: 1 } },
+        { returnDocument: "after" },
+      );
+      return strip<OutboxItem>(r);
+    },
+    async dueOutbox(now, limit) {
+      return stripAll<OutboxItem>(await (await col<WithId<OutboxItem>>("outbox"))
+        .find({ app, status: { $in: ["queued", "sending"] }, nextAttemptAt: { $lte: now } }).sort({ nextAttemptAt: 1 }).limit(limit).toArray());
+    },
     async deleteMailData(orgId) {
       const d = await getDb();
       const envIds = (await d.collection("environments").find({ app, orgId }).project({ _id: 1 }).toArray()).map((e) => String(e._id));
@@ -88,6 +115,7 @@ export function createMongoMailStore(getDb: () => Promise<MongoDatabase>, app: s
       await d.collection("accounts").deleteMany({ app, envId: { $in: envIds } });
       await d.collection("oauth_clients").deleteMany({ app, envId: { $in: envIds } });
       await d.collection("connect_links").deleteMany({ app, envId: { $in: envIds } });
+      await d.collection("outbox").deleteMany({ app, envId: { $in: envIds } });
       await d.collection("environments").deleteMany({ app, orgId });
       await d.collection("org_keys").deleteOne({ _id: `${app}:${orgId}` as never });
     },
@@ -103,6 +131,12 @@ export async function ensureMailIndexes(d: MongoDatabase) {
   await d.collection("accounts").createIndex({ app: 1, mode: 1, state: 1, nextPollAt: 1 });
   await d.collection("accounts").createIndex({ app: 1, "watch.id": 1 }, { partialFilterExpression: { "watch.id": { $type: "string" } } });
   await d.collection("sync_cursors").createIndex({ app: 1, accountId: 1 });
+  await d.collection("accounts").createIndex({ app: 1, mode: 1, "watch.expiresAt": 1 });
+  await d.collection("outbox").createIndex({ app: 1, accountId: 1, idempotencyKey: 1 }, { unique: true });
+  await d.collection("outbox").createIndex({ app: 1, status: 1, nextAttemptAt: 1 });
+  // Idempotency-Key retention: 7 days from creation.
+  await d.collection("outbox").createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 });
+  await d.collection("webhook_endpoints").createIndex({ app: 1, orgId: 1, envId: 1 });
   await d.collection("connect_links").createIndex({ app: 1, envId: 1 });
   await d.collection("connect_links").createIndex({ "oauth.stateHash": 1 }, { partialFilterExpression: { "oauth.stateHash": { $type: "string" } } });
   // Expired links are kept 7 days for the 410 explanation, then dropped.

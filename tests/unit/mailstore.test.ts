@@ -40,4 +40,19 @@ describe("mail store (memory driver)", () => {
     await db.deleteOrgData("o2");
     expect(await db.getAccount(b.id)).toBeNull();
   });
+
+  it("outbox: insert-if-absent per (account, key), org deletion removes it, renewable accounts are soonest-first", async () => {
+    const db = newDb();
+    const { env } = await setupEnv(db, "o1");
+    const base = { envId: env.id, accountId: "a1", requestHash: "h", status: "queued" as const, attempts: 0, sendAt: new Date(), nextAttemptAt: new Date(), payloadEnc: "x", result: null, error: null, createdAt: new Date(), updatedAt: new Date(), expireAt: new Date(Date.now() + 1000) };
+    const one = await db.insertOutbox({ ...base, id: "ob1", idempotencyKey: "k" });
+    const two = await db.insertOutbox({ ...base, id: "ob2", idempotencyKey: "k" });
+    expect([one.created, two.created, two.item.id]).toEqual([true, false, "ob1"]);
+    expect(await db.getOutbox("someone-else", "ob1")).toBeNull();
+    const mk = (id: string, mode: "push" | "polling", exp: number | null) => db.upsertAccount({ id, envId: env.id, externalId: id, email: `${id}@x.test`, provider: "google", backend: "gmail_api", state: "connected", lastError: null, nextPollAt: null, mode, watch: exp === null ? null : { id: null, expiresAt: new Date(exp) } });
+    await mk("late", "push", 3000); await mk("soon", "push", 1000); await mk("poll", "polling", 500); await mk("none", "push", null);
+    expect((await db.renewableAccounts(new Date(5000), 10)).map((a) => a.id)).toEqual(["soon", "late"]);
+    await db.deleteMailData("o1");
+    expect(await db.getOutbox(env.id, "ob1")).toBeNull();
+  });
 });

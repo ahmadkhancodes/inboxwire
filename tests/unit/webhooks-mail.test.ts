@@ -46,6 +46,7 @@ describe("outbound webhooks", () => {
     let t = now.getTime();
     for (let i = 1; i < MAX_ATTEMPTS; i++) {
       t += 13 * 3600_000;
+      await db.updateWebhookEndpoint("o1", "ep1", { failingSince: null }); // this test is about the retry cap, not auto-disable (see webhooks-m3.test.ts)
       await retryDueDeliveries({ db, fetchFn, now: new Date(t) });
     }
     x = (await db.getDelivery("o1", x!.id))!;

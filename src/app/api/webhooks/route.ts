@@ -4,12 +4,12 @@ import { requireOrg, requirePermission } from "@/lib/auth/session";
 import { getDb } from "@/lib/db";
 import { HttpError, json, readJson, withApi } from "@/lib/http";
 import { uuidv7 } from "@/lib/ids";
-import { isSafeWebhookUrl, newWebhookSecret } from "@/lib/webhooks/outbound";
+import { DEFAULT_EVENTS, isSafeWebhookUrl, newWebhookSecret } from "@/lib/webhooks/outbound";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const Create = z.object({ url: z.string().url().max(2048), events: z.array(z.string().min(1).max(64)).min(1).max(50) });
+const Create = z.object({ url: z.string().url().max(2048), events: z.array(z.string().min(1).max(64)).min(1).max(50).default(DEFAULT_EVENTS) });
 
 export const GET = withApi(async () => {
   const ctx = await requireOrg();

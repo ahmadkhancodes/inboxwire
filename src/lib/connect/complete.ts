@@ -1,4 +1,4 @@
-import { backendFor, type BackendDeps } from "@/lib/backends";
+import { backendFor, type BackendDeps, type Emit } from "@/lib/backends";
 import { ImapBackend, imapflowFactory, type ImapFactory, type ImapSettings } from "@/lib/backends/imap";
 import type { ConnectLink, Db, MailAccount, OAuthProvider } from "@/lib/db/types";
 import { appUrl } from "@/lib/env";
@@ -8,13 +8,13 @@ import { orgOfEnv, sealForOrg } from "@/lib/secrets";
 import type { TokenSet } from "./oauth";
 
 export interface CompleteDeps extends BackendDeps {
-  emit?: (orgId: string, type: string, data: unknown) => Promise<unknown>;
+  emit?: Emit;
   imapFactory?: ImapFactory;
 }
 
 async function announce(db: Db, orgId: string, a: MailAccount, deps: CompleteDeps) {
-  const emit = deps.emit ?? (async (o: string, t: string, d: unknown) => (await import("@/lib/webhooks/outbound")).emitEvent(o, t, d, { db }));
-  await emit(orgId, "accountConnected", { accountId: a.id, externalId: a.externalId, email: a.email, provider: a.provider, backend: a.backend }).catch(() => {});
+  const emit: Emit = deps.emit ?? (async (o, t, d, c) => (await import("@/lib/webhooks/outbound")).emitEvent(o, t, d, { db, envId: c?.envId }));
+  await emit(orgId, "accountConnected", { accountId: a.id, externalId: a.externalId, email: a.email, provider: a.provider, backend: a.backend }, { envId: a.envId }).catch(() => {});
 }
 
 /** Tries to start push (Gmail watch with a topic, Graph subscription on a public https URL); otherwise the account stays in polling mode. */
@@ -26,9 +26,10 @@ async function tryPush(db: Db, a: MailAccount, deps: CompleteDeps): Promise<Mail
   try {
     const pushAccount = { ...a, mode: "push" as const };
     const backend = await backendFor(db, pushAccount, deps);
-    await backend.watch().start();
+    const info = await backend.watch().start();
     await backend.close();
-    const watch = { id: null, expiresAt: new Date(Date.now() + (a.backend === "gmail_api" ? 7 : 3) * 86_400_000 - 3_600_000) };
+    // The provider's own expiry when it gave one; Graph's subscription id is what push notifications are matched on.
+    const watch = { id: info?.id ?? null, expiresAt: info?.expiresAt ?? new Date(Date.now() + (a.backend === "gmail_api" ? 7 : 3) * 86_400_000 - 3_600_000) };
     await db.updateAccount(a.id, { mode: "push", nextPollAt: null, watch });
     return { ...pushAccount, nextPollAt: null, watch };
   } catch {

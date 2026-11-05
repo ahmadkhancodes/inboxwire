@@ -32,7 +32,7 @@ describe("Pub/Sub JWT", () => {
     expect(await verifyPubsubJwt(mint({ iss: "https://evil.test" }), e, keys, now)).toBe(false);
     expect(await verifyPubsubJwt(mint({ exp: 1 }), e, keys, now)).toBe(false);
     expect(await verifyPubsubJwt(mint({}, "other"), e, keys, now)).toBe(false);
-    expect(await verifyPubsubJwt(mint().replace(/.$/, "A"), e, keys, now)).toBe(false);
+    expect(await verifyPubsubJwt((() => { const t = mint(); const i = t.length - 20; return t.slice(0, i) + (t[i] === "A" ? "B" : "A") + t.slice(i + 1); })(), e, keys, now)).toBe(false);
     expect(await verifyPubsubJwt("garbage", e, keys, now)).toBe(false);
   });
 

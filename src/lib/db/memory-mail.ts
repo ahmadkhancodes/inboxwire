@@ -1,5 +1,5 @@
 import { uuidv7 } from "@/lib/ids";
-import type { AccountCredential, ConnectLink, Environment, MailAccount, MailStore, OAuthClient, OrgKey, SyncCursor } from "./mail-types";
+import type { AccountCredential, ConnectLink, Environment, MailAccount, MailStore, OAuthClient, OrgKey, OutboxItem, SyncCursor } from "./mail-types";
 
 /** In-memory MailStore (same semantics as mongo-mail.ts; shared contract in tests/unit/mailstore.test.ts). */
 export function createMemoryMailStore(app: string): MailStore {
@@ -10,6 +10,8 @@ export function createMemoryMailStore(app: string): MailStore {
   const creds = new Map<string, AccountCredential>();
   const cursors = new Map<string, SyncCursor>();
   const links = new Map<string, ConnectLink>();
+  const outbox = new Map<string, OutboxItem>();
+  const eligible = (o: OutboxItem, now: Date) => (o.status === "queued" || o.status === "sending") && !!o.nextAttemptAt && o.nextAttemptAt <= now;
   const clone = <T>(x: T): T => structuredClone(x);
   const orEnvs = (orgId: string) => new Set([...envs.values()].filter((e) => e.orgId === orgId).map((e) => e.id));
 
@@ -66,6 +68,10 @@ export function createMemoryMailStore(app: string): MailStore {
         .slice(0, limit)
         .map(clone);
     },
+    async renewableAccounts(before, limit) {
+      return [...accounts.values()].filter((a) => a.mode === "push" && a.state !== "authenticationError" && a.watch?.expiresAt && a.watch.expiresAt <= before)
+        .sort((a, b) => a.watch!.expiresAt!.getTime() - b.watch!.expiresAt!.getTime()).slice(0, limit).map(clone);
+    },
     async setCredentials(c) { creds.set(c.accountId, { ...clone(c), app, updatedAt: new Date() }); },
     async getCredentials(id) { const c = creds.get(id); return c ? clone(c) : null; },
     async setCursor(c) { cursors.set(`${c.accountId}|${c.folder}`, { ...clone(c), app, updatedAt: new Date() }); },
@@ -88,8 +94,28 @@ export function createMemoryMailStore(app: string): MailStore {
       l.oauth = null;
       return true;
     },
+    async insertOutbox(o) {
+      const hit = [...outbox.values()].find((x) => x.accountId === o.accountId && x.idempotencyKey === o.idempotencyKey);
+      if (hit) return { item: clone(hit), created: false };
+      const item: OutboxItem = { ...clone(o), app };
+      outbox.set(item.id, item);
+      return { item: clone(item), created: true };
+    },
+    async getOutbox(envId, id) { const o = outbox.get(id); return o && o.envId === envId ? clone(o) : null; },
+    async updateOutbox(id, patch) { const o = outbox.get(id); if (o) outbox.set(id, { ...o, ...clone(patch) }); },
+    async claimOutbox(id, now, leaseMs) {
+      const o = outbox.get(id);
+      if (!o || !eligible(o, now)) return null;
+      const next: OutboxItem = { ...o, status: "sending", attempts: o.attempts + 1, nextAttemptAt: new Date(now.getTime() + leaseMs), updatedAt: now };
+      outbox.set(id, next);
+      return clone(next);
+    },
+    async dueOutbox(now, limit) {
+      return [...outbox.values()].filter((o) => eligible(o, now)).sort((a, b) => a.nextAttemptAt!.getTime() - b.nextAttemptAt!.getTime()).slice(0, limit).map(clone);
+    },
     async deleteMailData(orgId) {
       const ids = orEnvs(orgId);
+      for (const [k, o] of outbox) if (ids.has(o.envId)) outbox.delete(k);
       const accIds = new Set([...accounts.values()].filter((a) => ids.has(a.envId)).map((a) => a.id));
       for (const [k, c] of clients) if (ids.has(c.envId)) clients.delete(k);
       for (const [k, l] of links) if (ids.has(l.envId)) links.delete(k);

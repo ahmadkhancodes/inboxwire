@@ -124,12 +124,11 @@ describe("backend adapters (mocked providers)", () => {
     };
     const post = vi.fn(async () => ({ id: "sub9", expirationDateTime: new Date(Date.now() + 3600_000).toISOString() }));
     const client = { api: (p: string) => ({ get: async () => pages[p], post, patch: async () => ({}), delete: async () => ({}), header() { return this; } }) };
-    const onSubscription = vi.fn(async () => {});
-    const b = new GraphBackend(client as never, { notificationUrl: "https://x.test/api/hooks/graph/e1", clientState: "cs", onSubscription });
+    const b = new GraphBackend(client as never, { notificationUrl: "https://x.test/api/hooks/graph/e1", clientState: "cs" });
     expect(await b.sync()).toEqual({ events: [], cursor: "delta-final" });
-    await b.watch().start();
+    const info = await b.watch().start();
     expect(post).toHaveBeenCalledWith(expect.objectContaining({ clientState: "cs", notificationUrl: "https://x.test/api/hooks/graph/e1" }));
-    expect(onSubscription).toHaveBeenCalledWith(expect.objectContaining({ id: "sub9" }));
+    expect(info).toEqual(expect.objectContaining({ id: "sub9" }));
     expect(new GraphBackend(client as never).watch().mode).toBe("poll");
   });
 

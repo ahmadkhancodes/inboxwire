@@ -1,9 +1,9 @@
-import { syncAccount, type BackendDeps } from "@/lib/backends";
+import { syncAccount, type BackendDeps, type Emit } from "@/lib/backends";
 import type { Db } from "@/lib/db/types";
 import { appUrl } from "@/lib/env";
 import { validateGmailPush, validateGraphNotifications, type JwkFetcher } from "./validate";
 
-type Deps = BackendDeps & { emit?: (orgId: string, type: string, data: unknown) => Promise<unknown>; getKey?: JwkFetcher };
+type Deps = BackendDeps & { emit?: Emit; getKey?: JwkFetcher };
 export interface HookResponse { status: number; body: unknown; text?: string }
 
 /** Gmail Pub/Sub push. Always 2xx once validated (Pub/Sub retries non-2xx), even if the account is unknown. */

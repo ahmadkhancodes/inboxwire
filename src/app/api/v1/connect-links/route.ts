@@ -16,7 +16,7 @@ const Body = z.object({
 
 /** `POST /v1/connect-links`: single use, 24 h. The hosted page returns 410 once it is used or expired. */
 export const POST = withApi(async (req) => {
-  const { keyId, env, db } = await authEnv(req);
+  const { keyId, env, db } = await authEnv(req, "admin");
   await enforceRateLimit(`api:${keyId}`, RULES.api, db);
   const body = await readJson(req, Body);
   const { token, expiresAt } = await createConnectLink(db, { envId: env.id, ...body });
