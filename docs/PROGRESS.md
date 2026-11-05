@@ -1,11 +1,9 @@
 # Progress: Inboxwire by BufferSol
 
 ## State (5 Nov 2026)
-- Phase 0 done and merged (PR #1): DESIGN, SECTION_PLAN, ARCHITECTURE, ROADMAP, MANUAL_STEPS, design mock (docs/design/mock.html + mock-1440/375 png), competitor refs in docs/design/refs/.
-- Waiting for: orchestrator design approval and "kit-v1 ready".
-- Next: attach postslot read-only, copy kit per KIT_COPY.md, apply DESIGN.md tokens, create Mongo db/user, Stripe products, Vercel project, then M1.
-
-## Update (5 Nov 2026, later)
-- Design APPROVED by orchestrator. Infra notes: use VERCEL_TOKEN_NEW_ACCOUNT via CLI/REST only (team ahmad-code; the Vercel MCP connector is the old account); build on DB_DRIVER=memory until MONGODB_URI arrives.
-- Built `packages/mailcore` (pure TS, no UI, 17 tests green): MailBackend/Watcher interfaces, unified search parser + Gmail/IMAP/Graph translators, HMAC webhook signing + retry schedule, Ed25519 licence issue/verify (grace, skew, tamper), AES-256-GCM envelope crypto, provider autodiscovery. To be moved into the app after kit-v1 copy.
-- Still waiting for "kit-v1 ready" before any app code.
+- Phase 0 merged (design, architecture, roadmap, manual steps, mock). Design approved by orchestrator.
+- `packages/mailcore` merged: pure TS library (interfaces, search translators, webhook signing, Ed25519 licence, crypto, autodiscovery), 17 tests.
+- M1 in progress: kit copied (postslot @ 03398f3), tokens/fonts/product config applied, landing + compare (EmailEngine, Nylas, Unipile) + pricing copy rewritten. lint/typecheck/45 tests/build green on DB_DRIVER=memory.
+- LIVE: https://inboxwire.vercel.app (Vercel project `inboxwire`, team ahmad-code, memory DB stub, console mailer). Stripe test catalogue + webhook created (docs/STRIPE.md). 3-deployment pruning script run.
+- Remaining for M1 (after PR #4): /status page, custom domain inboxwire.buffersoltech.com (needs Cloudflare token), STRIPE_SECRET_KEY, QA screenshots in docs/qa/, legal copy pass.
+- Blocked/waiting: MONGODB_URI (orchestrator), STRIPE_SECRET_KEY_TEST, RESEND_API_KEY, Cloudflare keys.
