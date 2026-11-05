@@ -4,12 +4,21 @@ import type { LegalDoc } from "./types";
 export const acceptableUse: LegalDoc = {
   slug: "acceptable-use",
   title: "Acceptable use policy",
-  description: `What you may and may not do with ${p.name}.`,
+  description: `What you may and may not do with ${p.fullName}.`,
   sections: [
     {
       id: "purpose",
       title: "Purpose",
-      body: [`This policy keeps ${p.name} safe and reliable for everyone. It is part of the terms of service.`],
+      body: [
+        `${p.fullName} gives software teams API access to mailboxes that their users have authorized. This policy protects those users, mail providers and the service. It applies to you and to anyone using your account or API keys.`,
+      ],
+    },
+    {
+      id: "authorization",
+      title: "Authorization and consent",
+      body: [
+        "Connect a mailbox only when its owner has clearly authorized your application to access it, for the purpose you described to them. Do not collect credentials through deceptive screens, and do not access a mailbox after authorization is withdrawn.",
+      ],
     },
     {
       id: "prohibited",
@@ -17,14 +26,14 @@ export const acceptableUse: LegalDoc = {
       body: [
         {
           list: [
-            "Break the law or help others do so.",
-            "Collect data without a lawful basis or without telling the people who submit it.",
-            "Send spam, phishing or malware, or use the service to relay unsolicited bulk email.",
-            "Collect payment card numbers, government ID numbers, passwords or health records through a form unless we agree in writing.",
-            "Infringe intellectual property or privacy rights.",
-            "Probe, scan or attack the service, or bypass rate limits and quotas.",
-            "Resell the service as your own without an Agency plan or written permission.",
-            "Publish content that is hateful, threatening or sexually exploits minors.",
+            "use the service for spam, phishing, fraud, impersonation or bulk unsolicited email;",
+            "send messages that break the law or the rules of the mail provider you send through;",
+            "sell mailbox data, use it for advertising, or use it to train models in ways the mailbox owner has not authorized;",
+            "break or work around the terms, scopes, quotas or review requirements of Google, Microsoft or any other provider;",
+            "attempt to read data of other customers, probe or attack the service, or avoid rate limits and plan limits;",
+            "reverse engineer, resell or share a self-host licence key outside the licence terms;",
+            "upload malware or use the service to attack other systems;",
+            "use the service in a way that harms the stability or security of the platform.",
           ],
         },
       ],
@@ -33,13 +42,8 @@ export const acceptableUse: LegalDoc = {
       id: "enforcement",
       title: "Enforcement",
       body: [
-        "We may hold submissions, suspend forms or close accounts that break this policy. Where we can, we warn you first and give you time to fix the problem. For serious abuse we act immediately.",
+        `We may investigate suspected violations and suspend or end access, with notice where we reasonably can and immediately where there is a risk to users or the service. We may report unlawful activity to the authorities. To report abuse, write to ${p.legalEmail}.`,
       ],
-    },
-    {
-      id: "report",
-      title: "Report abuse",
-      body: [`Email ${p.supportEmail} with the form URL and what you saw.`],
     },
   ],
 };

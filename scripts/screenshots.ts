@@ -6,7 +6,7 @@ import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
-const ROUTES = ["/", "/pricing", "/docs", "/docs/getting-started", "/legal/privacy", "/legal/terms", "/compare/web3forms", "/sign-in", "/this-page-does-not-exist", ...process.argv.slice(2)];
+const ROUTES = ["/", "/pricing", "/docs", "/docs/getting-started", "/legal/privacy", "/legal/terms", "/compare/emailengine", "/status", "/casa", "/sign-in", "/this-page-does-not-exist", ...process.argv.slice(2)];
 const OUT = process.env.OUT_DIR ?? `docs/qa/${new Date().toISOString().slice(0, 10)}`;
 const WIDTHS = [375, 1440];
 
@@ -20,7 +20,7 @@ async function main() {
       await ctx.addInitScript((t) => { try { localStorage.setItem("theme", t); } catch {} }, theme);
       const page = await ctx.newPage();
       for (const r of ROUTES) {
-        await page.goto(BASE + r, { waitUntil: "networkidle" });
+        await page.goto(BASE + r, { waitUntil: "load" });
         await page.evaluate(async () => {
           // trigger scroll reveals, then return to top
           for (let y = 0; y < document.body.scrollHeight; y += 400) { window.scrollTo(0, y); await new Promise((s) => setTimeout(s, 40)); }

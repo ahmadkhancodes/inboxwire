@@ -1,6 +1,6 @@
 import { MongoClient, type Collection, type Db as MongoDatabase, type Document } from "mongodb";
 import { uuidv7 } from "@/lib/ids";
-import { DELIVERY_TTL_DAYS, type AuditEntry, type BillingAccount, type Db, type Entitlement, type Suppression, type WebhookDelivery, type WebhookEndpoint } from "./types";
+import { DELIVERY_TTL_DAYS, UPTIME_TTL_DAYS, type UptimeCheck, type AuditEntry, type BillingAccount, type Db, type Entitlement, type Suppression, type WebhookDelivery, type WebhookEndpoint } from "./types";
 
 // Ported from trayo server/db/mongo.ts. Changes: global singleton client (Vercel), pool 10, Date TTLs,
 // stripe events recorded after success, no sync/family/anonymous. Use only from runtime = "nodejs" routes.
@@ -103,6 +103,20 @@ export function createMongoDb(uri: string, dbName: string, app: string): Db {
         { upsert: true, returnDocument: "after" },
       );
       return r?.hits.length ?? 1;
+    },
+    async recordUptimeCheck(c) {
+      const entry: UptimeCheck = { ...c, id: uuidv7(), app, at: c.at ?? new Date() };
+      const expireAt = new Date(entry.at.getTime() + UPTIME_TTL_DAYS * 86_400_000);
+      await (await col<WithId<UptimeCheck> & { expireAt: Date }>("uptime_checks")).insertOne({ _id: entry.id, ...entry, expireAt });
+      return entry;
+    },
+    async listUptimeChecks({ since, target, limit = 5000 }) {
+      const docs = await (await col<WithId<UptimeCheck>>("uptime_checks"))
+        .find({ app, at: { $gte: since }, ...(target ? { target } : {}) })
+        .sort({ at: -1 })
+        .limit(limit)
+        .toArray();
+      return docs.map((d) => strip<UptimeCheck>(d)!);
     },
     async appendAudit(e) {
       const entry: AuditEntry = { ...e, id: uuidv7(), app, at: e.at ?? new Date() };
@@ -214,6 +228,8 @@ export async function ensureIndexes(uri: string, dbName: string) {
   await d.collection("webhook_deliveries").createIndex({ app: 1, orgId: 1, createdAt: -1 });
   await d.collection("webhook_deliveries").createIndex({ app: 1, status: 1, nextAttemptAt: 1 });
   await d.collection("webhook_deliveries").createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 });
+  await d.collection("uptime_checks").createIndex({ app: 1, target: 1, at: -1 });
+  await d.collection("uptime_checks").createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 });
   await d.collection("suppressions").createIndex({ app: 1, email: 1 });
   // Better Auth collections
   await d.collection("user").createIndex({ email: 1 }, { unique: true });

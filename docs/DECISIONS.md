@@ -16,3 +16,9 @@ Standing decisions are in docs/factory/BATCH1_PLAN.md (Mongo instead of Postgres
 - Landing follows docs/SECTION_PLAN.md; no testimonial/case-study block until a real design partner exists.
 - Wordmark: "Inboxwire" + amber "by BufferSol" jack tab (brand/wordmark.tsx).
 - 5 Nov (wind-up): extra-mailbox price is a licensed per-unit price (quantity = overage mailboxes) instead of a Stripe meter, for simplicity; revisit if proration needs change. Vercel env `DB_DRIVER=memory` is informational only (the kit picks memory when MONGODB_URI is absent). Accent amber pending PALETTE_REGISTRY check.
+
+## 5 Nov 2026 (M1-C)
+- **Extra mailbox price lives in `product.extraMailbox`** (99 cents, lookup key `inboxwire_extra_mailbox_monthly`), applies on Cloud Growth only (above 100). Starter has no extras, so the slider never shows Starter + extras undercutting Growth. Competitor figures live in `src/config/competitors.ts` with the read date (3 Nov 2026); Nylas is included because its tiers are in docs/brief.md (Free 5, Essentials $15/10, Pro $49/25 + $2 each).
+- **/status** reads `uptime_checks` (Db interface, TTL 100 days). Probe job `uptime-probe` runs every minute from the Cloudflare cron but stores a sample only every 5 minutes (about 26k rows per 90 days per target set). Daily Vercel cron kept as a fallback.
+- **/casa kit download** is not live yet (kit is generated per release tag in M4); the page says so rather than linking a dead file.
+- Legal copy drafted for a metadata-only mail API; not lawyer-reviewed, flagged in MANUAL_STEPS section E.
