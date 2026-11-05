@@ -6,7 +6,7 @@ import { securityHeaders } from "./src/lib/security/headers";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   pageExtensions: ["ts", "tsx", "md", "mdx"],
-  serverExternalPackages: ["mongodb"],
+  serverExternalPackages: ["mongodb", "imapflow", "googleapis", "google-auth-library"],
   turbopack: {
     rules: {
       "*.css": {
@@ -14,6 +14,10 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  // Public API paths: /v1/* is served by the route handlers under /api/v1/*.
+  async rewrites() {
+    return [{ source: "/v1/:path*", destination: "/api/v1/:path*" }];
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders() }];

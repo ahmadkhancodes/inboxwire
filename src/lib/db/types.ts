@@ -4,6 +4,9 @@
 // TTL fields are BSON Dates (the apps stored numbers, so Mongo TTL never fired: BACKEND_REUSE 1.5).
 
 import type { PlanId } from "@/config/product";
+import type { MailStore } from "./mail-types";
+
+export type * from "./mail-types";
 
 export type EntitlementStatus = "none" | "trialing" | "active" | "past_due" | "canceled" | "lifetime";
 
@@ -98,7 +101,7 @@ export interface UptimeCheck {
   at: Date;
 }
 
-export interface Db {
+export interface Db extends MailStore {
   readonly app: string;
 
   // billing

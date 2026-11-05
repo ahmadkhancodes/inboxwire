@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { parseQuery, toGmail, toImap, toGraph } from '../src/search';
-import { sign, verify, nextRetryDelaySec } from '../src/webhook';
-import { generateKeys, issue, check } from '../src/licence';
-import { EnvKeyWrapper, newDataKey, encrypt, decrypt } from '../src/crypto';
-import { classify } from '../src/autodiscover';
+import { parseQuery, toGmail, toImap, toGraph } from '@/lib/mailcore/search';
+import { sign, verify, nextRetryDelaySec } from '@/lib/mailcore/webhook';
+import { generateKeys, issue, check } from '@/lib/mailcore/licence';
+import { EnvKeyWrapper, newDataKey, encrypt, decrypt } from '@/lib/mailcore/crypto';
+import { classify } from '@/lib/mailcore/autodiscover';
 import { randomBytes } from 'node:crypto';
 
 describe('search', () => {
