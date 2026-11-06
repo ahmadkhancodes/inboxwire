@@ -3,6 +3,7 @@ import { DELIVERY_TTL_DAYS, type Db, type WebhookDelivery, type WebhookEndpoint 
 import { randomToken, uuidv7 } from "@/lib/ids";
 import { webhook as mcWebhook } from "@/lib/mailcore";
 import { product } from "@/config/product";
+import { allowPrivateTargets, assertPublicHost, isPublicHostname, type Lookup } from "@/lib/security/net";
 
 // Outbound webhooks: HMAC-SHA256 signed by mailcore `webhook.sign`, retries with exponential backoff, delivery log, replay, auto-disable.
 // Header: `Inboxwire-Signature: t=<unix>,v1=<hex hmac of "t.body">` (also sent as X-Webhook-Signature), plus X-Webhook-Id / X-Webhook-Event.
@@ -32,10 +33,10 @@ export const EVENT_TYPES = ["messageNew", "messageMoved", "messageDeleted", "mes
 export const DEFAULT_EVENTS: string[] = ["messageNew"];
 
 type Notify = (orgId: string, ep: WebhookEndpoint, reason: string) => Promise<void>;
-interface AttemptOpts { db: Db; fetchFn?: typeof fetch; now?: Date; notify?: Notify }
+interface AttemptOpts { db: Db; fetchFn?: typeof fetch; now?: Date; notify?: Notify; lookup?: Lookup }
 
 /** Queue an event to every enabled endpoint subscribed to it (or to "*"), and try once immediately. */
-export async function emitEvent(orgId: string, event: string, data: unknown, opts: { db?: Db; fetchFn?: typeof fetch; now?: Date; envId?: string | null; notify?: Notify } = {}) {
+export async function emitEvent(orgId: string, event: string, data: unknown, opts: { db?: Db; fetchFn?: typeof fetch; now?: Date; envId?: string | null; notify?: Notify; lookup?: Lookup; attempt?: boolean } = {}) {
   const db = opts.db ?? (await getDb());
   const now = opts.now ?? new Date();
   const eps = (await db.listWebhookEndpoints(orgId)).filter((e) => e.enabled && (!e.envId || e.envId === opts.envId) && (e.events.includes("*") || e.events.includes(event)));
@@ -49,9 +50,29 @@ export async function emitEvent(orgId: string, event: string, data: unknown, opt
       expireAt: new Date(now.getTime() + DELIVERY_TTL_DAYS * 864e5),
     };
     await db.createDelivery(d);
-    out.push(await attemptDelivery(d, ep, { db, fetchFn: opts.fetchFn, now, notify: opts.notify }));
+    // attempt: false only queues it (the caller or the `webhooks-retry` cron delivers it).
+    out.push(opts.attempt === false ? d : await attemptDelivery(d, ep, { db, fetchFn: opts.fetchFn, now, notify: opts.notify, lookup: opts.lookup }));
   }
   return out;
+}
+
+/** First 300 characters of the receiver's answer without buffering an unbounded body. */
+async function readSnippet(res: Response): Promise<string> {
+  if (!res.body) return "";
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (size < 2048) {
+      const { done, value } = await reader.read();
+      if (done || !value) break;
+      chunks.push(value);
+      size += value.length;
+    }
+  } catch { /* partial snippet is fine */ } finally {
+    await reader.cancel().catch(() => {});
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks)).slice(0, 300);
 }
 
 export async function attemptDelivery(
@@ -67,6 +88,8 @@ export async function attemptDelivery(
   let snippet: string | null = null;
   const started = Date.now();
   try {
+    // Re-checked on every attempt: the URL was validated when saved, but its DNS answer can change (rebinding).
+    await assertPublicHost(new URL(ep.url).hostname, { lookup: opts.lookup });
     const ctrl = AbortSignal.timeout(10_000);
     const sig = await signPayload(ep.secret, d.payload, Math.floor(now.getTime() / 1000));
     const res = await fetchFn(ep.url, {
@@ -85,9 +108,9 @@ export async function attemptDelivery(
     });
     code = res.status;
     if (!res.ok) error = `http_${res.status}`;
-    snippet = (await res.text().catch(() => "")).slice(0, 300) || null;
+    snippet = (await readSnippet(res)) || null;
   } catch (e) {
-    error = (e as Error).name === "TimeoutError" ? "timeout" : "network_error";
+    error = (e as Error).message === "private_address" ? "unsafe_target" : (e as Error).name === "TimeoutError" ? "timeout" : "network_error";
   }
   const ok = !error;
   const latency = Math.max(0, Date.now() - started);
@@ -160,6 +183,20 @@ export async function replayFailed(orgId: string, opts: { db?: Db; fetchFn?: typ
   return out;
 }
 
+/** Delivers deliveries queued with `attempt: false`, oldest first, until the time budget runs out (the cron takes the rest). */
+export async function deliverQueued(db: Db, queued: WebhookDelivery[], opts: { budgetMs?: number; fetchFn?: typeof fetch; notify?: Notify; lookup?: Lookup } = {}) {
+  const started = Date.now();
+  let attempted = 0;
+  for (const d of queued) {
+    if (Date.now() - started > (opts.budgetMs ?? 20_000)) break;
+    const ep = await db.getWebhookEndpoint(d.orgId, d.endpointId);
+    if (!ep || !ep.enabled) continue;
+    await attemptDelivery(d, ep, { db, fetchFn: opts.fetchFn, notify: opts.notify, lookup: opts.lookup });
+    attempted++;
+  }
+  return { attempted, left: queued.length - attempted };
+}
+
 /** Cron job: retry due deliveries. */
 export async function retryDueDeliveries(opts: { db?: Db; fetchFn?: typeof fetch; now?: Date; limit?: number; notify?: Notify } = {}) {
   const db = opts.db ?? (await getDb());
@@ -178,14 +215,11 @@ export async function retryDueDeliveries(opts: { db?: Db; fetchFn?: typeof fetch
   return { processed: due.length, succeeded: ok };
 }
 
-/** Block private/loopback targets (SSRF) for user-supplied webhook URLs. */
+/** Block private/loopback targets (SSRF) for user-supplied webhook URLs. Name check only; `attemptDelivery` also checks DNS answers. */
 export function isSafeWebhookUrl(raw: string): boolean {
   let u: URL;
   try { u = new URL(raw); } catch { return false; }
   if (u.protocol !== "https:" && !(process.env.NODE_ENV !== "production" && u.protocol === "http:")) return false;
-  const h = u.hostname.toLowerCase();
-  if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".internal") || h.endsWith(".local")) return false;
-  if (/^(127\.|10\.|192\.168\.|169\.254\.|0\.)/.test(h) || /^172\.(1[6-9]|2\d|3[01])\./.test(h)) return false;
-  if (h.startsWith("[") || h === "::1") return false;
-  return true;
+  if (u.username || u.password) return false;
+  return allowPrivateTargets() || isPublicHostname(u.hostname);
 }

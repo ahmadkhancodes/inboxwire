@@ -60,10 +60,10 @@ export const product = {
     effectiveDate: "2026-11-05",
   },
   subProcessors: [
-    { name: "Vercel Inc.", purpose: "Hosting and edge network", location: "United States" },
+    { name: "Vercel Inc.", purpose: "Hosting, edge network and cookieless page-view analytics on the marketing site", location: "United States" },
     { name: "MongoDB Inc. (Atlas)", purpose: "Database hosting", location: "United States (AWS us-east-1)" },
     { name: "Stripe Inc.", purpose: "Payments and invoicing", location: "United States" },
-    { name: "Email delivery provider", purpose: "Platform emails (sign-in links, alerts) until our own mail servers are live", location: "United States" },
+    { name: "Resend Inc.", purpose: "Platform emails to dashboard users (sign-in links, alerts). Never your users' mailbox content.", location: "United States" },
   ],
   currency: "usd" as const,
   /** Default billing interval shown first in the pricing toggle (annual pre-selected, brief sheet 07). */

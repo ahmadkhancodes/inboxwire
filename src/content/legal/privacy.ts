@@ -26,7 +26,7 @@ export const privacy: LegalDoc = {
             "Connected mailbox metadata: for each mailbox your users connect, its address, provider, connection state and an index of message metadata such as folder, date, sender, flags and thread. We do not store message bodies by default.",
             "Mailbox credentials: OAuth access and refresh tokens, and IMAP or SMTP credentials where used. These are encrypted before they are stored.",
             "Your OAuth client credentials: if you bring your own Google or Microsoft OAuth client, its secret is stored encrypted.",
-            "Webhook delivery logs: each delivery attempt to your endpoints, with status, latency and a short response snippet, kept for the retention period of your plan.",
+            "Webhook delivery logs: each delivery attempt to your endpoints, with status, latency and a short response snippet, kept for up to 90 days.",
             "Billing data: your plan and subscription status. Card details go straight to Stripe and never touch our servers.",
             "Technical data: IP address, browser type and request logs, kept briefly for security, abuse prevention and debugging. We do not log message bodies.",
           ],
@@ -39,7 +39,7 @@ export const privacy: LegalDoc = {
       title: "How mailbox data is handled",
       body: [
         "Mailbox content is processed only to provide the features you use through the API: syncing, searching, reading, sending and notifying your webhooks when mail arrives. No person at BufferSol reads mailbox content. Access to production data by our staff is limited to what is needed to keep the service running and is not used to view message content.",
-        "Message bodies are not stored by default. Where a request or event needs content, it passes through the service and short lived queue payloads expire after 24 hours.",
+        "Message bodies are not stored by default. Where a request or event needs content, it passes through the service and the encrypted payload of a queued send is deleted as soon as it is sent or fails (outbox records without content are kept 7 days for idempotency).",
         `The use and transfer of information received from Google APIs to any other app by ${p.fullName} adheres to the Google API Services User Data Policy, including the Limited Use requirements. We use Google user data only to provide and improve the user facing features you request, we do not transfer it to others except as needed to provide those features, to comply with law or as part of a merger, and we do not use it for advertising or sell it.`,
         "Google access runs through the OAuth client that you create in your own Google Cloud project. You decide the scopes and are responsible for your own Google verification and security assessment.",
       ],
@@ -71,7 +71,7 @@ export const privacy: LegalDoc = {
       id: "retention",
       title: "Retention and deletion",
       body: [
-        "We keep account data while your account is active. Webhook delivery logs are kept for the retention period of your plan.",
+        "We keep account data while your account is active. Webhook delivery logs are kept for up to 90 days.",
         "You can delete a connected mailbox with the deletion API (DELETE /v1/accounts/{id}). It revokes the stored token and deletes the related rows, and we keep a deletion record. If you cancel your subscription, we revoke tokens and delete your data 30 days after the end of the paid period. Backups are overwritten on their normal schedule. We keep billing records as long as the law requires.",
       ],
     },

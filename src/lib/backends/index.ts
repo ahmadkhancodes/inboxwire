@@ -6,12 +6,13 @@ import { refreshAccessToken } from "@/lib/connect/oauth";
 import { GmailBackend, type GmailLike } from "./gmail";
 import { GraphBackend, type GraphLike } from "./graph";
 import { ImapBackend, imapflowFactory, type ImapFactory, type ImapSettings } from "./imap";
+import { assertPublicHost, type Lookup } from "@/lib/security/net";
 import { makeSmtpSend, nodemailerFactory, type SmtpSettings, type SmtpTransportFactory } from "./smtp";
 
 /** Emits a webhook event for an org; `ctx.envId` scopes it to endpoints of that environment. */
 export type Emit = (orgId: string, type: string, data: unknown, ctx?: { envId: string }) => Promise<unknown>;
 
-export interface BackendDeps { fetchFn?: typeof fetch; imapFactory?: ImapFactory; gmail?: (accessToken: string) => GmailLike; graph?: (accessToken: string) => GraphLike; smtp?: SmtpTransportFactory; now?: Date }
+export interface BackendDeps { fetchFn?: typeof fetch; imapFactory?: ImapFactory; gmail?: (accessToken: string) => GmailLike; graph?: (accessToken: string) => GraphLike; smtp?: SmtpTransportFactory; now?: Date; lookup?: Lookup }
 
 const FRESH_MS = 60_000;
 
@@ -23,6 +24,8 @@ export async function backendFor(db: Db, account: MailAccount, deps: BackendDeps
   if (account.backend === "imap") {
     if (!cred.imapSmtpEnc) throw new Error("no_credentials");
     const s = JSON.parse(await openForOrg(db, orgId, cred.imapSmtpEnc)) as { imap: ImapSettings; smtp?: SmtpSettings };
+    // Checked again on every use, not only at connect time: the server's DNS answer can change later.
+    for (const h of [s.imap.host, s.smtp?.host]) if (h) await assertPublicHost(h, { lookup: deps.lookup });
     const smtp = s.smtp ? makeSmtpSend(s.smtp, account.email, deps.smtp ?? nodemailerFactory) : undefined;
     return new ImapBackend(s.imap, deps.imapFactory ?? imapflowFactory, smtp);
   }
@@ -62,7 +65,7 @@ async function realGraph(token: string): Promise<GraphLike> {
 export interface SyncOutcome { accountId: string; events: number; ok: boolean; error?: string }
 
 /** Runs one sync for an account: loads the cursor, syncs, stores the new cursor, emits webhook events, schedules the next poll. */
-export async function syncAccount(db: Db, accountId: string, deps: BackendDeps & { emit?: Emit; pollEveryMs?: number } = {}): Promise<SyncOutcome> {
+export async function syncAccount(db: Db, accountId: string, deps: BackendDeps & { emit?: Emit; pollEveryMs?: number; deliverBudgetMs?: number } = {}): Promise<SyncOutcome> {
   const account = await db.getAccount(accountId);
   if (!account) return { accountId, events: 0, ok: false, error: "not_found" };
   const now = deps.now ?? new Date();
@@ -74,11 +77,19 @@ export async function syncAccount(db: Db, accountId: string, deps: BackendDeps &
     const cur = await db.getCursor(accountId, folder);
     const cursorValue = account.backend === "gmail_api" ? cur?.historyId : account.backend === "graph" ? cur?.deltaLink : cur?.uidvalidity ? JSON.stringify({ uidvalidity: cur.uidvalidity, uidnext: cur.uidnext }) : undefined;
     const r = await backend.sync(cursorValue ?? undefined);
-    await db.setCursor(storeCursor(account, folder, r.cursor));
     const orgId = await orgOfEnv(db, account.envId);
-    const emit: Emit = deps.emit ?? (async (o, t, d, c) => (await import("@/lib/webhooks/outbound")).emitEvent(o, t, d, { db, envId: c?.envId }));
-    for (const e of r.events) await emit(orgId, e.type, { accountId, ...eventData(e) }, { envId: account.envId });
+    // Every event is durably queued BEFORE the cursor moves: a crash or timeout in between re-reads the same changes
+    // (at-least-once) instead of skipping them. Delivery happens after, inside a time budget; the rest is left to the cron.
+    const outbound = deps.emit ? null : await import("@/lib/webhooks/outbound");
+    const queued: Awaited<ReturnType<NonNullable<typeof outbound>["emitEvent"]>> = [];
+    for (const e of r.events) {
+      const data = { accountId, ...eventData(e) };
+      if (deps.emit) await deps.emit(orgId, e.type, data, { envId: account.envId });
+      else queued.push(...(await outbound!.emitEvent(orgId, e.type, data, { db, envId: account.envId, attempt: false, now })));
+    }
+    await db.setCursor(storeCursor(account, folder, r.cursor));
     await db.updateAccount(accountId, { state: "connected", lastError: null, nextPollAt: account.mode === "polling" ? next : null });
+    if (outbound && queued.length) await outbound.deliverQueued(db, queued, { budgetMs: deps.deliverBudgetMs ?? 20_000 }).catch(() => {});
     return { accountId, events: r.events.length, ok: true };
   } catch (e) {
     const msg = (e as Error).message || "sync_failed";

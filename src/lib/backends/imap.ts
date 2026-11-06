@@ -34,7 +34,8 @@ export type SmtpSend = (req: SendRequest, threading?: { inReplyTo?: string; refe
 export const imapflowFactory: ImapFactory = (s) => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { ImapFlow } = require("imapflow") as typeof import("imapflow");
-  return new ImapFlow({ host: s.host, port: s.port, secure: s.secure, auth: { user: s.user, pass: s.pass }, logger: false, socketTimeout: 20_000, greetingTimeout: 10_000 }) as unknown as ImapClientLike;
+  // Without implicit TLS, STARTTLS is REQUIRED (imapflow's default would fall back to sending the password in clear).
+  return new ImapFlow({ host: s.host, port: s.port, secure: s.secure, ...(s.secure ? {} : { doSTARTTLS: true }), auth: { user: s.user, pass: s.pass }, logger: false, socketTimeout: 20_000, greetingTimeout: 10_000 }) as unknown as ImapClientLike;
 };
 
 const FOLDER = "INBOX";

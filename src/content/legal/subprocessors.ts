@@ -10,7 +10,7 @@ export const subprocessors: LegalDoc = {
       id: "list",
       title: "Current subprocessors",
       body: [
-        `${p.legal.entity} uses these providers to run ${p.name}. Each is bound by a written data processing agreement. Mailbox content is not sent to any of them for analysis or advertising.`,
+        `${p.legal.entity} uses these providers to run ${p.name}. Mailbox content is not sent to any of them for analysis or advertising.`,
         {
           table: {
             head: ["Provider", "Purpose", "Location"],

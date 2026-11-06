@@ -28,6 +28,7 @@ export const authentication: DocPage = {
       heading: "API keys",
       body: [
         "Server to server requests use API keys. Create and revoke them in Settings, then API keys. Send the key in the x-api-key header on every request. Never put a key in browser code or a public repository. If a key leaks, revoke it and create a new one.",
+        "Each key has a scope (read, send or admin) and, by default, one environment. A key bound to production answers 403 environment_not_allowed if it sends x-environment: development. Keys created with \"Any environment\" pick the environment per request with the x-environment header (production when it is missing).",
       ],
       code: {
         lang: "bash",

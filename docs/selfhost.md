@@ -48,6 +48,7 @@ The container entrypoint runs the same check on every start and logs the result.
 
 ## Operate
 - **Health:** `GET /api/health`. **Metrics:** `GET /metrics` with `Authorization: Bearer $METRICS_TOKEN` (Prometheus text: mailboxes by state, outbox and delivery counts).
+- **Private networks:** IMAP/SMTP hosts and webhook URLs that resolve to loopback, private, link-local or single-label names are refused. If your mail server or webhook receiver is on your own network, set `ALLOW_PRIVATE_NETWORK_TARGETS=1`.
 - **Backups:** the `mongo-data` volume, or `docker compose exec -T mongo mongodump --archive > backup.archive`.
 - **Update:** set `INBOXWIRE_VERSION` to a release tag without the `v`, then `docker compose pull && docker compose up -d`. The worker creates the MongoDB indexes (the `ensure-indexes` job) each time it starts, so an update needs no manual step.
 - **Delete a mailbox:** `DELETE /v1/accounts/{id}` revokes the Google token and writes a `deletion_record`.

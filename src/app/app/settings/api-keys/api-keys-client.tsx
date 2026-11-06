@@ -17,8 +17,11 @@ const SCOPE_LABEL: Record<ScopeChoice, string> = { read: "Read: list and search 
 const scopeOf = (m: unknown): string => {
   const raw = typeof m === "string" ? (() => { try { return JSON.parse(m) as unknown; } catch { return null; } })() : m;
   const list = (raw as { scopes?: string[] } | null)?.scopes;
-  return list ? list.join(", ") || "none" : "admin (legacy)";
+  const env = (raw as { environment?: string } | null)?.environment;
+  return `${list ? list.join(", ") || "none" : "admin (legacy)"}${env ? ` · ${env} only` : " · any environment"}`;
 };
+type EnvChoice = "production" | "staging" | "development" | "any";
+const ENV_LABEL: Record<EnvChoice, string> = { production: "Production only", staging: "Staging only", development: "Development only", any: "Any environment (x-environment header)" };
 
 export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: boolean }) {
   const keys = useAsync<KeyRow[]>(async () => {
@@ -29,6 +32,7 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
   }, [orgId]);
   const [name, setName] = useState("");
   const [scope, setScope] = useState<ScopeChoice>("read");
+  const [envChoice, setEnvChoice] = useState<EnvChoice>("production");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<{ name: string; key: string } | null>(null);
@@ -42,7 +46,7 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
     if (!clean) return setError("Name the key after where it will be used, for example Production server.");
     setBusy(true);
     setError(null);
-    const { data, error: err } = await authClient.apiKey.create({ name: clean, organizationId: orgId, metadata: { scopes: scope === "admin" ? ["read", "send", "admin"] : scope === "send" ? ["read", "send"] : ["read"] } });
+    const { data, error: err } = await authClient.apiKey.create({ name: clean, organizationId: orgId, metadata: { scopes: scope === "admin" ? ["read", "send", "admin"] : scope === "send" ? ["read", "send"] : ["read"], ...(envChoice === "any" ? {} : { environment: envChoice }) } });
     setBusy(false);
     if (err || !data) return setError(authError(err, "We could not create the key. Try again."));
     setCreated({ name: clean, key: (data as unknown as { key: string }).key });
@@ -78,6 +82,13 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
               <Field label="Scope" htmlFor="key-scope">
                 <select id="key-scope" value={scope} onChange={(e) => setScope(e.target.value as ScopeChoice)} className="body-5 min-h-11 w-full rounded-md border border-border-strong bg-surface px-3 text-text focus-visible:focus-ring">
                   {(Object.keys(SCOPE_LABEL) as ScopeChoice[]).map((k) => <option key={k} value={k}>{SCOPE_LABEL[k]}</option>)}
+                </select>
+              </Field>
+            </div>
+            <div className="sm:w-56">
+              <Field label="Environment" htmlFor="key-env">
+                <select id="key-env" value={envChoice} onChange={(e) => setEnvChoice(e.target.value as EnvChoice)} className="body-5 min-h-11 w-full rounded-md border border-border-strong bg-surface px-3 text-text focus-visible:focus-ring">
+                  {(Object.keys(ENV_LABEL) as EnvChoice[]).map((k) => <option key={k} value={k}>{ENV_LABEL[k]}</option>)}
                 </select>
               </Field>
             </div>

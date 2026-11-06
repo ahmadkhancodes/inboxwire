@@ -84,7 +84,7 @@ export default function HomePage() {
         proof={<>Free Developer tier: 3 mailboxes, all API features, no card. Market check: $1,450 a year at emailengine.app, read 3 Nov 2026.</>}
         visual={<LinesTicker />}
       />
-      <TaglineReveal text="Nothing outsourced. Your mail data is handled only by our code on our servers: no AI APIs, no email-sending services, no analytics trackers." />
+      <TaglineReveal text="Nothing outsourced. Your users' mail is handled only by our code: it never goes to AI APIs, ad networks or analytics tools. Every subprocessor is named on our subprocessors page." />
       <Problem
         title="Mailbox sync is months of the wrong work"
         intro="IMAP edge cases, OAuth refresh tokens, Gmail history, Graph subscriptions that expire, MIME. None of it is your product."

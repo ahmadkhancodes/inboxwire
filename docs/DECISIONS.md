@@ -61,3 +61,17 @@ Standing decisions are in docs/factory/BATCH1_PLAN.md (Mongo instead of Postgres
 - **SDK.** `packages/sdk` is an npm workspace (`@buffersol/inboxwire-sdk`, MIT, zero dependencies). `src/lib/sdk-gen.ts` turns the OpenAPI document into `generated.ts` (types, operation table, a typed `InboxwireClient`); the hand-written client adds auth, environment header, GET retries (sends retry only with an idempotency key) and `verifyWebhook`. A root test fails when the committed `generated.ts` is stale. Publishing needs an npm token (MANUAL_STEPS).
 - **OpenAPI fix.** The `Error` component was overwritten by a self-reference (`$ref` to itself); it now carries the real schema. This was found by generating the SDK.
 - **No new libraries.** Zip writer, SDK generator, metrics text and SSE are written in-repo (standard library only), so THIRD_PARTY.md has nothing to add.
+
+## 6 Nov 2026 (M5 review)
+- **Outbound-target policy.** Customer-supplied hosts (IMAP/SMTP, webhooks) must be public. `src/lib/security/net.ts` blocks the following and checks every DNS answer:
+  - loopback, RFC 1918, link-local/metadata, CGNAT, ULA and mapped addresses;
+  - single-label names and `.local`/`.internal`/`.lan`.
+  - A name that does not resolve is let through, since the dial fails anyway. Reserved test TLDs (`.test`, `.example`, `.invalid`) skip DNS.
+  - Self-host opt-out: `ALLOW_PRIVATE_NETWORK_TARGETS=1`.
+  - IP pinning against DNS rebinding is deferred (REVIEW P2).
+- **IMAP without implicit TLS requires STARTTLS** (`doSTARTTLS: true`), the same rule as SMTP's `requireTLS`. Servers that offer neither cannot be connected. That is intended.
+- **Sync is at-least-once for webhooks.** Events are queued (deliveries with `pending` status) before the cursor moves. The sync then delivers within a 20 s budget and the `webhook-retries` cron delivers the rest. A crash between queueing and saving the cursor re-emits the same changes with new event ids.
+- **API keys are bound to one environment** through `metadata.environment` (production by default in the UI). A key without it (created before M5) keeps "any environment, chosen by `x-environment`". A bound key with a different `x-environment` gets 403 `environment_not_allowed`. An unknown value binds to nothing.
+- **IMAP connect never overwrites a mailbox row of another end user.** It proceeds only if the link's externalId (or, without one, the email) equals the row's externalId; otherwise 409 `mailbox_already_connected`. OAuth reconnects are unaffected, because the provider proves the mailbox.
+- **Org deletion revokes first.** `DELETE /api/account` runs `deleteOrgMailboxes` (revoke + delete + `deletion_record`, reason `org_deleted`) before `deleteOrgData`. Deletion records survive the org's data deletion as proof.
+- **`/api/health` stays liveness-only.** Mongo health is the `uptime-probe` database target.
