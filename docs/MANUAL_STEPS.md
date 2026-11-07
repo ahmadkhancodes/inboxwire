@@ -36,3 +36,13 @@ Also confirm before launch: `legal@buffersoltech.com` as the security-report and
 4. **Cloudflare cron worker**: redeploy `infra/cron-worker` so `JOBS` includes `purge-canceled` (wrangler.toml already lists it).
 5. **GHCR**: the first `git tag v0.1.0 && git push --tags` builds and pushes `ghcr.io/ahmadkhancodes/inboxwire` and attaches `casa-kit.zip` to the release; make the package public at https://github.com/users/ahmadkhancodes/packages after the first push.
 6. **SDK on npm**: needs an npm token for the `@buffersol` scope (https://www.npmjs.com/settings/buffersol/tokens), then `npm publish -w @buffersol/inboxwire-sdk --access public`.
+
+## G. M5 review: launch blockers and owner checks (see docs/REVIEW.md)
+1. **Legal placeholders (blocker, REVIEW P0-7).** Fill `legal.jurisdiction` and `legal.address` in `src/config/product.ts` (section E). Until then the privacy policy, terms and DPA show `{{...}}`.
+2. **Cloudflare cron worker (blocker, REVIEW P0-8).**
+   - Needs `CLOUDFLARE_SAAS_TOKEN` + `CLOUDFLARE_SAAS_ACCOUNT_ID`.
+   - Deploy `infra/cron-worker` with `CRON_SECRET` and the app URL. `JOBS` already lists `webhook-retries,uptime-probe,poll-imap,outbox-send,renew-watches,purge-canceled`.
+   - Without it, the hosted app runs these once a day (vercel.json). IMAP accounts never poll, and webhook and send retries wait up to 24 h.
+3. **Sub-processor DPAs.** Confirm a signed or click-through DPA with Vercel, MongoDB, Stripe and Resend (dashboard links: https://vercel.com/legal/dpa, https://www.mongodb.com/legal/data-processing-agreement, https://stripe.com/legal/dpa, https://resend.com/legal/dpa). Then restore the sentence "Each is bound by a written data processing agreement" in `src/content/legal/subprocessors.ts`.
+4. **Back up `MASTER_KEY` offline** (password manager, two people). There is no rotation yet (REVIEW P1-7). Losing or changing it makes every stored mailbox credential unreadable and breaks push hooks.
+5. **Self-host only:** to sync an on-prem mail server or post webhooks to a private address, set `ALLOW_PRIVATE_NETWORK_TARGETS=1` in the container env (documented in docs/selfhost.md).

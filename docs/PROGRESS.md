@@ -8,6 +8,20 @@
 - **Checks:** lint (1 kit warning), typecheck, 45 unit tests, build, GitHub CI all green. mailcore tests now run in `npm test`.
 - Kit source: postslot @ 03398f3. Tag kit-v1 now = 35bdaa5 (only KIT_COPY rule text, tag workflow, deploy.sh changed); deploy.sh updated here to match.
 
+## 6 Nov 2026 (M5 review): pre-launch security/correctness review, all P0 fixed in code, NOT deployed
+- **docs/REVIEW.md**: findings ranked P0/P1/P2 with file, scenario and fix. 8 P0: 6 fixed in code, 2 are owner/ops launch blockers (legal placeholders, Cloudflare cron worker), see MANUAL_STEPS G.
+- **Fixed:**
+  - SSRF guard `src/lib/security/net.ts` for IMAP/SMTP hosts (connect page, and every poll/send) and webhook URLs (also re-checked by DNS on every delivery). `ALLOW_PRIVATE_NETWORK_TARGETS=1` opts self-hosters out.
+  - IMAP requires STARTTLS when not on implicit TLS.
+  - `syncAccount` queues every webhook event before moving the cursor (no lost `messageNew`), then delivers within a 20 s budget.
+  - False "no email-sending services / no analytics" tagline and the anonymous sub-processor line are corrected (Resend named, Vercel analytics stated). Retention copy now matches the code.
+  - P1s: keys are bound to an environment (picker on Settings, API keys; 403 `environment_not_allowed`), IMAP connect cannot take over another end user's mailbox row (409), org deletion revokes tokens via `deleteOrgMailboxes`, Graph hook checks the account's env, and threading headers are stripped of CR/LF.
+- **Checks:**
+  - lint (2 old warnings), typecheck, 225 unit tests (13 new in `tests/unit/m5-review.test.ts`, all fail on the old code) + 8 SDK tests, build, 12 Playwright e2e all green.
+  - Fixed an ambiguous e2e selector (`API keys` heading vs the "No API keys yet" empty state).
+  - One SSE timing test (`m4-live`) failed once under full-suite load and passed on reruns.
+- **Left:** P1-7..P1-15 in REVIEW.md (MASTER_KEY rotation, delivery/sync leases, provider timeouts, env/log-day plan limits, OAuth clients per env, cap race, 44 px `sm` buttons, licence after refund), deploy M2-M5, Lighthouse, runbooks.
+
 ## 5 Nov 2026 (M4): dashboard, licences, deletion, metering, self-host, CASA kit, SDK. Code done, NOT deployed
 - **Dashboard** `/app`: Lines (lamps, mode, last event, per-state "why, and what to do"), Line detail (timeline), Ticker (SSE `/api/app/live`, polling fallback `/api/app/live/snapshot`), Deliveries (replay button), Outbox, Keys (scope picker), OAuth clients, Billing (ten-lamp mailbox meter, licence list). Each has loading, empty and error states. Screenshots 375/1440 light/dark in `docs/qa/2026-11-05-m4/` (no horizontal overflow); Playwright `tests/e2e/dashboard.spec.ts` covers the empty states, seeded lines, replay, outbox, billing meter.
 - **Metering + plans:** one mailbox count for meter, banner, `GET /v1/usage` and Stripe. Hard cap 402 `mailbox_limit` on Developer/Starter, metered extras ($0.99) on Growth via the `inboxwire_extra_mailbox_monthly` subscription line, unlimited on Self-host.
@@ -55,6 +69,6 @@ New KIT_COPY rule to verify: the primary colour family must not repeat another B
 5. DONE (see M2 entry above): M2 (ARCHITECTURE.md §8 items 4, 5): move packages/mailcore into `src/lib/mailcore` (or keep as workspace import via tsconfig paths), then build: Mongo collections + indexes (environments, api_keys, oauth_clients, accounts, account_credentials, sync_cursors, connect_links), `POST /v1/connect-links` (single use, 24 h, reuse 410), hosted `/connect/<token>` page with autodiscovery, BYO OAuth client wizard, Gmail/Graph/IMAP backend adapters (googleapis / @microsoft/microsoft-graph-client / imapflow, record licences in THIRD_PARTY.md), push hooks `/api/hooks/gmail|graph/<envId>`, cron polling job via Cloudflare cron worker (`infra/cron-worker`).
 6. DONE (see M3 entry above): M3 (items 6, 7): read/search/send API under /v1, outbox + Idempotency-Key, webhook endpoints + signed delivery (use mailcore webhook.ts), delivery log, replay, auto-disable at 72 h, OpenAPI from Zod.
 7. DONE (see M4 entry above): M4 (items 8-12): dashboard screens (Lines, Ticker via SSE, Deliveries, Outbox, Keys, OAuth clients, Billing lamp meter), Ed25519 licences (mailcore licence.ts) issued on Stripe invoice.paid for selfhost, Docker image + GHCR workflow, CASA kit zip, deletion API + 30-day purge, /metrics, SDK, docs.
-8. NEXT: M5: QA, Lighthouse 90+, scorecard, launch checklist, runbooks.
+8. NEXT: M5: review DONE (docs/REVIEW.md, 6 Nov). Still: owner blockers in MANUAL_STEPS G, open P1s in REVIEW.md, deploy, QA, Lighthouse 90+, scorecard, launch checklist, runbooks.
 9. After each milestone: lint + typecheck + tests + build, deploy, `scripts/vercel-keep-latest-3.sh inboxwire`, update this file, PR, merge, one-line `send_message` to session_01Mn59CnGYFsETSnQdPMcWxP.
 Tooling notes: no `rsync` in the container (use tar); Vercel MCP connector is the OLD account (use REST/CLI with VERCEL_TOKEN_NEW_ACCOUNT); GitHub PR tools need owner+repo; kit-v1 clone is at /home/user/postslot (re-clone if the container is new).

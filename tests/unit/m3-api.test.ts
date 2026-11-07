@@ -274,7 +274,7 @@ describe("IMAP/SMTP send through nodemailer's transport", () => {
     const db = newDb();
     const { env } = await setupEnv(db, "org_i");
     const a: MailAccount = await db.upsertAccount({ id: "acc_i", envId: env.id, externalId: "i1", email: "ana@example.test", provider: "imap", backend: "imap", state: "connected", lastError: null, nextPollAt: null, mode: "polling" });
-    await db.setCredentials({ accountId: a.id, imapSmtpEnc: await sealForOrg(db, "org_i", JSON.stringify({ imap: { host: "h", port: 993, secure: true, user: "u", pass: "p" }, smtp: { host: "smtp.example.test", port: 587, secure: false, user: "u", pass: "p" } })) });
+    await db.setCredentials({ accountId: a.id, imapSmtpEnc: await sealForOrg(db, "org_i", JSON.stringify({ imap: { host: "imap.example.test", port: 993, secure: true, user: "u", pass: "p" }, smtp: { host: "smtp.example.test", port: 587, secure: false, user: "u", pass: "p" } })) });
     const sendMail = vi.fn(async () => ({ messageId: "<m@x>" }));
     const { item } = await enqueueSend(db, { envId: env.id, accountId: a.id, request: { to, text: "hello" } });
     const r = await processOutbox(db, item.id, { imapFactory: fakeImap({ uidValidity: 1, uidNext: 1, uids: [], connects: 0 }), smtp: () => ({ sendMail, close() {} }), emit: async () => {} });

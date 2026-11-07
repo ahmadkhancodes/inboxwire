@@ -32,7 +32,7 @@ export async function handleGraphHook(db: Db, envId: string, req: { url: string;
     if (seen.has(n.subscriptionId)) continue;
     seen.add(n.subscriptionId);
     const account = await db.findAccountByWatchId(n.subscriptionId);
-    if (!account) continue;
+    if (!account || account.envId !== envId) continue; // a subscription id only counts on its own environment's hook
     if (n.lifecycleEvent) {
       // Renewal is done by cron; mark the subscription as due now.
       if (n.lifecycleEvent === "subscriptionRemoved" || n.lifecycleEvent === "reauthorizationRequired") await db.updateAccount(account.id, { watch: { id: account.watch?.id ?? null, expiresAt: new Date() } });

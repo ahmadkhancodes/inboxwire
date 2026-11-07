@@ -69,3 +69,12 @@ export async function purgeCanceled(db: Db, deps: DeleteDeps & { days?: number; 
   }
   return { orgs: purged, accounts, more: false };
 }
+
+/** Org deletion: every mailbox goes through the same revoke + delete + deletion_record flow before the org's rows are dropped. */
+export async function deleteOrgMailboxes(db: Db, orgId: string, deps: DeleteDeps = {}) {
+  let n = 0;
+  for (const env of await db.listEnvironments(orgId)) {
+    for (const a of await db.listAccounts(env.id)) { await deleteAccount(db, a, "org_deleted", deps); n++; }
+  }
+  return n;
+}

@@ -10,7 +10,9 @@ export function buildRfc822(from: string, req: SendRequest, opts: { inReplyTo?: 
   if (req.cc?.length) lines.push(`Cc: ${req.cc.map(addr).join(", ")}`);
   if (req.bcc?.length) lines.push(`Bcc: ${req.bcc.map(addr).join(", ")}`);
   lines.push(`Subject: ${header(req.subject ?? "")}`, `Date: ${new Date().toUTCString()}`, "MIME-Version: 1.0");
-  if (opts.inReplyTo) lines.push(`In-Reply-To: ${opts.inReplyTo}`, `References: ${opts.references ?? opts.inReplyTo}`);
+  // Message-ID/References come from a received (attacker-controlled) message: strip CR/LF so they cannot add headers.
+  const oneLine = (v: string) => v.replace(/[\r\n]+/g, " ").trim();
+  if (opts.inReplyTo) lines.push(`In-Reply-To: ${oneLine(opts.inReplyTo)}`, `References: ${oneLine(opts.references ?? opts.inReplyTo)}`);
   const b64 = (s: string) => Buffer.from(s).toString("base64").replace(/.{76}/g, "$&\r\n");
   if (req.html && req.text) {
     const boundary = `iw_${randomBytes(12).toString("hex")}`;

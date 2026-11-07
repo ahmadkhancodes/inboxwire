@@ -17,7 +17,7 @@ export const security: LegalDoc = {
       id: "minimal-data",
       title: "We store less",
       body: [
-        "Message bodies are not stored by default. We keep a metadata index, encrypted credentials and delivery logs. Queue payloads expire after 24 hours, and we never write message bodies to logs. No person at BufferSol reads mailbox content.",
+        "Message bodies are not stored by default. We keep a metadata index, encrypted credentials and delivery logs. The encrypted payload of a queued send is deleted as soon as the message is sent or fails, outbox records without payload are kept 7 days for idempotency, and we never write message bodies to logs. No person at BufferSol reads mailbox content.",
       ],
     },
     {
@@ -37,7 +37,7 @@ export const security: LegalDoc = {
       id: "access",
       title: "Access control",
       body: [
-        "API keys are scoped and belong to an environment. Dashboard members have roles. Connect links are single use and expire after 24 hours. Webhooks are signed with HMAC-SHA256 and a timestamp header so you can verify them. Administrative actions are written to an append-only audit log.",
+        "API keys are scoped (read, send, admin) and bound to one environment by default. Dashboard members have roles. Connect links are single use and expire after 24 hours. Webhooks are signed with HMAC-SHA256 and a timestamp header so you can verify them. Administrative actions are written to an append-only audit log.",
       ],
     },
     {
@@ -51,7 +51,7 @@ export const security: LegalDoc = {
       id: "development",
       title: "Engineering practice",
       body: [
-        "We align our application controls with OWASP ASVS level 2. We scan dependencies and run dynamic scans before releases, and we aim to ship with no high or critical findings. We restrict outbound network access from the service. We provide a CASA Readiness Kit on every plan with evidence about our own components, to help you with Google's assessment of your application. It does not replace that assessment.",
+        "We align our application controls with OWASP ASVS level 2. We scan dependencies and run dynamic scans before releases, and we aim to ship with no high or critical findings. We block webhook deliveries and IMAP/SMTP connections to private, loopback and cloud metadata addresses. We provide a CASA Readiness Kit on every plan with evidence about our own components, to help you with Google's assessment of your application. It does not replace that assessment.",
       ],
     },
     {

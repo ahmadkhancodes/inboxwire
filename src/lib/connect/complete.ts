@@ -7,6 +7,7 @@ import { uuidv7 } from "@/lib/ids";
 import { assertCanAddMailbox, syncExtraMailboxes } from "@/lib/billing/mailboxes";
 import { getStripe } from "@/lib/billing/stripe";
 import { log } from "@/lib/logger";
+import { assertPublicHost } from "@/lib/security/net";
 import { orgOfEnv, sealForOrg } from "@/lib/secrets";
 import type { TokenSet } from "./oauth";
 
@@ -85,6 +86,14 @@ export function connectResult(link: ConnectLink, a: MailAccount) {
 /** IMAP/SMTP: verify first (wrong password = 422, link NOT burned), then consume the link and store encrypted settings. */
 export async function completeImap(db: Db, link: ConnectLink, input: { email: string; imap: ImapSettings; smtp?: Omit<ImapSettings, "user" | "pass"> }, deps: CompleteDeps = {}) {
   await ensureCapacity(db, link.envId, input.email);
+  // The typed address is not proven by an IMAP login on a server of the user's choice: never let it take over a
+  // mailbox row that another end user (externalId) of this environment already owns.
+  const prev = await db.findAccountByEmail(link.envId, input.email.toLowerCase());
+  if (prev && prev.externalId !== (link.externalId ?? input.email.toLowerCase())) throw new HttpError(409, "mailbox_already_connected");
+  // SSRF: the person holding a connect link must not make our servers dial loopback, private or metadata addresses.
+  for (const h of [input.imap.host, input.smtp?.host]) {
+    if (h) await assertPublicHost(h, { lookup: deps.lookup }).catch(() => { throw new HttpError(422, "mail_host_not_allowed", { host: h }); });
+  }
   const backend = new ImapBackend(input.imap, deps.imapFactory ?? imapflowFactory);
   try {
     await backend.connect();

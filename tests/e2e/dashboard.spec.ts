@@ -56,7 +56,7 @@ test("dashboard screens: empty states, then seeded lines, ticker, deliveries, ou
   await expect(page.getByText("smtp_not_configured")).toBeVisible();
 
   await page.goto("/app/keys");
-  await expect(page.getByRole("heading", { name: "API keys" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "API keys", exact: true })).toBeVisible();
   await page.goto("/app/oauth-clients");
   await expect(page.getByRole("heading", { name: /OAuth clients/ })).toBeVisible();
 

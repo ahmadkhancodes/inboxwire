@@ -4,7 +4,7 @@ import { adminEmails } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 import { getAuth } from "./index";
 import { can, type OrgRole } from "./roles";
-import { parseScopes, type Scope } from "./scopes";
+import { parseKeyEnvironment, parseScopes, type Scope } from "./scopes";
 import type { statements } from "./roles";
 
 export interface SessionUser {
@@ -79,11 +79,11 @@ export function requirePermission(ctx: OrgContext, resource: keyof typeof statem
 export const isFounderAdmin = (email: string | null | undefined) => !!email && adminEmails().includes(email.toLowerCase());
 
 /** API key auth for /api/v1/* (x-api-key or Bearer). Returns the owning org id. */
-export async function authApiKey(req: Request): Promise<{ orgId: string; keyId: string; scopes: Scope[] }> {
+export async function authApiKey(req: Request): Promise<{ orgId: string; keyId: string; scopes: Scope[]; environment: ReturnType<typeof parseKeyEnvironment> }> {
   const raw = req.headers.get("x-api-key") ?? req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
   if (!raw) throw new HttpError(401, "missing_api_key");
   const auth = await getAuth();
   const r = (await auth.api.verifyApiKey({ body: { key: raw } })) as { valid: boolean; key?: { id: string; referenceId?: string; userId?: string; metadata?: unknown } | null };
   if (!r.valid || !r.key) throw new HttpError(401, "invalid_api_key");
-  return { orgId: r.key.referenceId ?? r.key.userId ?? "", keyId: r.key.id, scopes: parseScopes(r.key.metadata) };
+  return { orgId: r.key.referenceId ?? r.key.userId ?? "", keyId: r.key.id, scopes: parseScopes(r.key.metadata), environment: parseKeyEnvironment(r.key.metadata) };
 }

@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { z } from "zod";
+import { deleteOrgMailboxes } from "@/lib/accounts/deletion";
 import { audit } from "@/lib/audit";
 import { getAuth } from "@/lib/auth";
 import { requireUser } from "@/lib/auth/session";
@@ -36,6 +37,7 @@ export const DELETE = withApi(async (req) => {
     if (!soleOwner) continue;
     const acct = await db.getBillingAccount(o.id);
     if (stripe && acct?.stripeCustomerId) await cancelAppSubscriptions(stripe, db.app, acct.stripeCustomerId);
+    await deleteOrgMailboxes(db, o.id); // stop watches and revoke provider tokens before the rows go
     await db.deleteOrgData(o.id);
     await auth.api.deleteOrganization({ headers: h, body: { organizationId: o.id } });
     await audit({ orgId: o.id, actorId: user.id, action: "org.deleted", ip: clientIp(req) });
