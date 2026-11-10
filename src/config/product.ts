@@ -38,6 +38,39 @@ const price = (plan: PlanId, interval: Interval, usd: number): PlanPrice => ({
   lookupKey: `${slug}_${plan}_${interval === "month" ? "monthly" : "annual"}`,
 });
 
+/**
+ * ONE switch for every time-based promise on public pages. Production today is Vercel Hobby: scheduled jobs run once a day,
+ * functions stop at 60 s, no always-on worker. Flip to "frequent" only when a per-minute scheduler (infra/cron-worker) is live.
+ */
+export type SchedulerMode = "daily" | "frequent";
+export const SCHEDULER: SchedulerMode = "daily";
+
+const CADENCES = {
+  daily: {
+    probeShort: "once a day",
+    probeSentence: "Probed once a day from our own scheduler.",
+    statusLead: "Daily and 90 day uptime",
+    retryHeadline: "Failed deliveries are retried on every daily scheduler run, up to 8 attempts, and you can replay any event from the dashboard or the API the moment you fix your endpoint.",
+    retryApi: "otherwise the event is queued for retry on the next daily run, for up to 8 attempts",
+    imapSync: "once a day",
+    cronLine: "a scheduled job calls /api/cron/<job> with a shared secret once a day (retry, renew watches, uptime probe, outbox, purge).",
+    demoRetry: "next daily run",
+    demoImapLast: "6 h ago",
+  },
+  frequent: {
+    probeShort: "every 5 minutes",
+    probeSentence: "Probed every 5 minutes from our own cron.",
+    statusLead: "Live and 90 day uptime",
+    retryHeadline: "Failed deliveries are retried with backoff at 30 seconds, 2 minutes, 10 minutes, 30 minutes, 1 hour, 3 hours, 6 hours and 12 hours. That is up to 8 attempts. After the last attempt the delivery is marked failed, and you can replay it from the dashboard.",
+    retryApi: "otherwise we retry with backoff for about 24 hours",
+    imapSync: "every minute",
+    cronLine: "a Cloudflare worker calls /api/cron/<job> with a shared secret every minute (poll, retry, renew watches, purge).",
+    demoRetry: "in 60 s",
+    demoImapLast: "41 s ago",
+  },
+} as const;
+export const cadence = CADENCES[SCHEDULER];
+
 export const product = {
   slug,
   name: "Inboxwire",

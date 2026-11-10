@@ -1,4 +1,4 @@
-import { product } from "@/config/product";
+import { product, cadence } from "@/config/product";
 
 // Source text of the CASA Readiness Kit. The kit covers OUR components only; the customer's own OAuth app, assessor and
 // answers stay theirs. Nothing here claims a certification we do not hold (no SOC 2, no ISO). Edit the text here, the zip is built from it.
@@ -168,7 +168,7 @@ Example response:
 - **Database:** MongoDB Atlas (AWS us-east-1). One database; every record carries the app name; TTL indexes expire logs and payloads.
 - **Payments:** Stripe (checkout and portal; we never see card numbers).
 - **Mail for the platform itself:** a transactional email provider for sign-in links and alerts.
-- **Cron:** a Cloudflare worker calls /api/cron/<job> with a shared secret every minute (poll, retry, renew watches, purge).
+- **Cron:** ${cadence.cronLine}
 - **Self-host:** the same app as a Docker image with MongoDB; nothing leaves your servers except traffic to the mail providers and your own webhook endpoints.
 
 Trust boundaries: browser | edge/app | database | mail providers | customer webhook endpoints. Secrets exist in memory only after decryption and are never logged.

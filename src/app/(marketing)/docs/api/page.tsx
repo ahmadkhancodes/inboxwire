@@ -3,7 +3,7 @@ import { CodeBlock } from "@/components/docs/code-block";
 import { DocsNav } from "@/components/docs/docs-nav";
 import { Container } from "@/components/ui/layout";
 import { docGroups } from "@/content/docs";
-import { product } from "@/config/product";
+import { product, cadence } from "@/config/product";
 import { appUrl } from "@/lib/env";
 import { buildOpenApi, operations, type Operation } from "@/lib/openapi";
 import { pageMetadata } from "@/lib/seo";
@@ -147,7 +147,7 @@ export default function ApiReferencePage() {
 
           <section id="events" aria-labelledby="events-h" className="flex scroll-mt-24 flex-col gap-4 border-t border-border pt-6">
             <h2 id="events-h" className="heading-5 text-text">Webhook events and signatures</h2>
-            <p className="body-3 text-text-subtle">Events are POSTed as JSON <Code>{`{"id","type","created","data"}`}</Code>. The <Code>id</Code> stays the same on retries and replays, so use it to dedupe. Return any 2xx within 10 seconds; otherwise we retry with backoff for about 24 hours. After 72 hours of failures the endpoint is disabled and the owners get an email. Failed events stay in the delivery log and can be replayed.</p>
+            <p className="body-3 text-text-subtle">Events are POSTed as JSON <Code>{`{"id","type","created","data"}`}</Code>. The <Code>id</Code> stays the same on retries and replays, so use it to dedupe. Return any 2xx within 10 seconds; otherwise {cadence.retryApi}. After 72 hours of failures the endpoint is disabled and the owners get an email. Failed events stay in the delivery log and can be replayed.</p>
             <p className="body-3 text-text-subtle">Verify every request: compute HMAC-SHA256 of <Code>{"<t>.<raw body>"}</Code> with your endpoint secret and compare it to <Code>v1</Code> in the <Code>Inboxwire-Signature</Code> header. Reject timestamps older than five minutes.</p>
             <CodeBlock lang="node" code={VERIFY} />
             <Params title="Events" rows={EVENTS} />
