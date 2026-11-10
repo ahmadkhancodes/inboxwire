@@ -4,7 +4,7 @@ import type { ConnectLink, Db, MailAccount, OAuthProvider } from "@/lib/db/types
 import { appUrl } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 import { uuidv7 } from "@/lib/ids";
-import { assertCanAddMailbox, syncExtraMailboxes } from "@/lib/billing/mailboxes";
+import { assertCanAddMailbox, mailboxUsage, syncExtraMailboxes } from "@/lib/billing/mailboxes";
 import { getStripe } from "@/lib/billing/stripe";
 import { log } from "@/lib/logger";
 import { assertPublicHost } from "@/lib/security/net";
@@ -49,6 +49,22 @@ export async function ensureCapacity(db: Db, envId: string, email: string | null
   await assertCanAddMailbox(db, await orgOfEnv(db, envId));
 }
 
+/**
+ * `ensureCapacity` is check-then-insert, so two connects at the same moment can both pass. After inserting, a hard-capped
+ * plan ranks the org's mailboxes by (createdAt, id): a newcomer that ranks past the allowance is removed and answers 402.
+ * The ranking is the same for both racers, so at most the over-cap one loses.
+ */
+async function enforceCapAfterInsert(db: Db, orgId: string, accountId: string) {
+  const u = await mailboxUsage(db, orgId);
+  if (u.mode !== "hard_cap") return;
+  const all: MailAccount[] = [];
+  for (const e of await db.listEnvironments(orgId)) all.push(...(await db.listAccounts(e.id)));
+  all.sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime() || x.id.localeCompare(y.id));
+  if (all.findIndex((x) => x.id === accountId) < u.included) return;
+  await db.deleteAccountData(accountId);
+  throw new HttpError(402, "mailbox_limit", { plan: u.plan.id, limit: u.included, used: u.included });
+}
+
 /** Best effort: bill the extra mailboxes of a Growth subscription after the count changed. */
 export async function billExtraMailboxes(db: Db, orgId: string) {
   const stripe = getStripe();
@@ -65,6 +81,7 @@ async function register(db: Db, link: ConnectLink, a: { email: string; provider:
     provider: a.provider, backend: a.backend, state: "syncing", lastError: null, nextPollAt: new Date(), mode: "polling",
   });
   await db.setCredentials({ ...creds, accountId: acct.id });
+  if (!prev) await enforceCapAfterInsert(db, orgId, acct.id);
   const final = await tryPush(db, acct, deps);
   await announce(db, orgId, final, deps);
   if (!prev && !deps.noBilling) await billExtraMailboxes(db, orgId);

@@ -2,6 +2,7 @@ import { product } from "@/config/product";
 import { appUrl, env } from "@/lib/env";
 import { getDb } from "@/lib/db";
 import { hmacSha256Hex } from "@/lib/ids";
+import { log } from "@/lib/logger";
 import { consoleTransport, resendTransport, smtpTransport } from "./transports";
 import type { MailMessage, MailTransport, SendResult } from "./types";
 
@@ -45,4 +46,18 @@ export async function sendMail(msg: MailMessage, transport: MailTransport = tran
     headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
   }
   return transport.send({ ...msg, headers, from: msg.from ?? env().MAIL_FROM ?? product.mailFrom });
+}
+
+/**
+ * `sendMail` for request paths: a provider rejection (bad address, rate limit, outage, timeout) must not 500 the request
+ * or leak the provider's text. Logs only a short code (never the address) and returns `{ ok: false }`.
+ */
+export async function sendMailSafe(msg: MailMessage, transport?: MailTransport): Promise<{ ok: boolean; result?: SendResult }> {
+  try {
+    return { ok: true, result: await sendMail(msg, transport) };
+  } catch (e) {
+    const m = (e as Error).message ?? "";
+    log.warn("mail_send_failed", { code: /^mail_send_failed_\d{3}$/.test(m) ? m : (e as Error).name === "TimeoutError" ? "timeout" : "send_error" });
+    return { ok: false };
+  }
 }

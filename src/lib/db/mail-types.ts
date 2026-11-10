@@ -35,6 +35,9 @@ export interface MailAccount {
   state: AccountState;
   lastError: string | null;
   nextPollAt: Date | null;
+  /** Held while a sync runs, so a push hook and the poll cron never sync one account at once. */
+  syncLeaseUntil?: Date | null;
+  syncDirty?: boolean;
   mode: "push" | "polling";
   /** Provider push subscription (Gmail watch / Graph subscription), renewed by cron. */
   watch?: { id: string | null; expiresAt: Date | null; /** Do not retry a failed renewal before this time. */ retryAt?: Date | null } | null;
@@ -155,6 +158,10 @@ export interface MailStore {
   findAccountByEmail(envId: string, email: string): Promise<MailAccount | null>;
   findAccountByWatchId(watchId: string): Promise<MailAccount | null>;
   listAccounts(envId: string): Promise<MailAccount[]>;
+  /** Per-account sync lease: true if this caller now holds it (lease expires after leaseMs). A refused caller marks the account dirty. */
+  claimSync(id: string, now: Date, leaseMs: number): Promise<boolean>;
+  /** Releases the lease; true if someone asked for a sync while it was held (the holder should sync once more). */
+  releaseSync(id: string): Promise<boolean>;
   updateAccount(id: string, patch: Partial<Omit<MailAccount, "id" | "app" | "envId">>): Promise<void>;
   /** Accounts in polling mode that are due (state not authenticationError), oldest first. */
   dueAccounts(now: Date, limit: number): Promise<MailAccount[]>;

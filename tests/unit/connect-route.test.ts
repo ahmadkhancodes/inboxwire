@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { lookupConnectLink } from "@/lib/connect/links";
 import { HttpError } from "@/lib/http";
 import { sha256 } from "@/lib/ids";
+import { NONE } from "@/lib/billing/entitlement";
 import { createMemoryDb } from "@/lib/db/memory";
 
 const db = createMemoryDb("inboxwire");
@@ -40,6 +41,8 @@ describe("POST /v1/connect-links", () => {
 
   it("honours x-environment and rejects bad redirect URLs and bad input", async () => {
     const { POST } = await import("@/app/api/v1/connect-links/route");
+    // 3 environments are a Growth feature; the plan limit itself is tested in m6-hardening.
+    await db.setEntitlement("org_route", { ...NONE(Date.now()), isPaid: true, status: "active", plan: "growth", interval: "month", expiresAt: Date.now() + 20 * 864e5, subscriptionId: "sub_1" });
     const dev = await POST(post({}, { "x-environment": "development" }), undefined as never);
     expect(((await dev.json()) as { environment: string }).environment).toBe("development");
     expect((await POST(post({}, { "x-environment": "qa" }), undefined as never)).status).toBe(400);

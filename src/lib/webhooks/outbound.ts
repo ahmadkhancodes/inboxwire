@@ -2,6 +2,7 @@ import { getDb } from "@/lib/db";
 import { DELIVERY_TTL_DAYS, type Db, type WebhookDelivery, type WebhookEndpoint } from "@/lib/db/types";
 import { randomToken, uuidv7 } from "@/lib/ids";
 import { webhook as mcWebhook } from "@/lib/mailcore";
+import { effectivePlan } from "@/lib/billing/entitlement";
 import { product } from "@/config/product";
 import { allowPrivateTargets, assertPublicHost, isPublicHostname, type Lookup } from "@/lib/security/net";
 
@@ -10,6 +11,8 @@ import { allowPrivateTargets, assertPublicHost, isPublicHostname, type Lookup } 
 // X-Webhook-Id is the event id and stays the same on a retry or replay, so receivers can dedupe.
 
 export const MAX_ATTEMPTS = 8;
+/** An attempt has 10 s to answer; a crashed worker's delivery becomes due again after this lease. */
+const DELIVERY_LEASE_MS = 2 * 60_000;
 /** Backoff after attempt n (1-based): 30s, 2m, 10m, 30m, 1h, 3h, 6h, 12h (+-10% jitter). */
 const BACKOFF_S = [30, 120, 600, 1800, 3600, 10800, 21600, 43200];
 export function backoffMs(attempt: number, rand = Math.random): number {
@@ -39,6 +42,7 @@ interface AttemptOpts { db: Db; fetchFn?: typeof fetch; now?: Date; notify?: Not
 export async function emitEvent(orgId: string, event: string, data: unknown, opts: { db?: Db; fetchFn?: typeof fetch; now?: Date; envId?: string | null; notify?: Notify; lookup?: Lookup; attempt?: boolean } = {}) {
   const db = opts.db ?? (await getDb());
   const now = opts.now ?? new Date();
+  const ttlMs = await logTtlMs(db, orgId, now);
   const eps = (await db.listWebhookEndpoints(orgId)).filter((e) => e.enabled && (!e.envId || e.envId === opts.envId) && (e.events.includes("*") || e.events.includes(event)));
   const out: WebhookDelivery[] = [];
   for (const ep of eps) {
@@ -47,13 +51,19 @@ export async function emitEvent(orgId: string, event: string, data: unknown, opt
     const d: WebhookDelivery = {
       id, eventId: id, envId: opts.envId ?? null, app: db.app, orgId, endpointId: ep.id, event, payload, status: "pending", attempts: 0,
       nextAttemptAt: now, lastStatusCode: null, lastError: null, createdAt: now, updatedAt: now,
-      expireAt: new Date(now.getTime() + DELIVERY_TTL_DAYS * 864e5),
+      expireAt: new Date(now.getTime() + ttlMs),
     };
     await db.createDelivery(d);
     // attempt: false only queues it (the caller or the `webhooks-retry` cron delivers it).
     out.push(opts.attempt === false ? d : await attemptDelivery(d, ep, { db, fetchFn: opts.fetchFn, now, notify: opts.notify, lookup: opts.lookup }));
   }
   return out;
+}
+
+/** Delivery-log retention follows the plan (`log_days`: 7, 30, 90), capped at the 90 day TTL index. */
+async function logTtlMs(db: Db, orgId: string, now: Date): Promise<number> {
+  const days = effectivePlan(await db.getEntitlement(orgId), now.getTime()).limits.log_days;
+  return Math.min(days, DELIVERY_TTL_DAYS) * 864e5;
 }
 
 /** First 300 characters of the receiver's answer without buffering an unbounded body. */
@@ -82,6 +92,11 @@ export async function attemptDelivery(
 ): Promise<WebhookDelivery> {
   const now = opts.now ?? new Date();
   const fetchFn = opts.fetchFn ?? fetch;
+  // Lease first: the inline attempt, the Vercel cron and the Cloudflare cron can all reach the same delivery.
+  // Whoever loses the claim (or finds it already done) leaves it alone, so one event is not POSTed twice in parallel.
+  const claimed = await opts.db.claimDelivery(d.id, now, DELIVERY_LEASE_MS);
+  if (!claimed) return d;
+  d = claimed;
   const attempts = d.attempts + 1;
   let code: number | null = null;
   let error: string | null = null;

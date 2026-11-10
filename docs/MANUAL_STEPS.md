@@ -46,3 +46,10 @@ Also confirm before launch: `legal@buffersoltech.com` as the security-report and
 3. **Sub-processor DPAs.** Confirm a signed or click-through DPA with Vercel, MongoDB, Stripe and Resend (dashboard links: https://vercel.com/legal/dpa, https://www.mongodb.com/legal/data-processing-agreement, https://stripe.com/legal/dpa, https://resend.com/legal/dpa). Then restore the sentence "Each is bound by a written data processing agreement" in `src/content/legal/subprocessors.ts`.
 4. **Back up `MASTER_KEY` offline** (password manager, two people). There is no rotation yet (REVIEW P1-7). Losing or changing it makes every stored mailbox credential unreadable and breaks push hooks.
 5. **Self-host only:** to sync an on-prem mail server or post webhooks to a private address, set `ALLOW_PRIVATE_NETWORK_TARGETS=1` in the container env (documented in docs/selfhost.md).
+
+## H. Launch hardening (10 Nov 2026)
+1. **Indexes:** nothing new is required (the new fields `syncLeaseUntil`, `syncDirty` and the delivery lease reuse existing collections and indexes); indexes still auto-create on first connection.
+2. **P1-7 stays open (MASTER_KEY rotation).** Back the key up offline (G4) before real customers connect mailboxes. A rotation design needs a database backup and a rehearsal first.
+3. **Deploy is still yours:** this pass changed code and tests only. Playwright could not run in the CI container (no browsers installed); run `npx playwright install chromium && npx playwright test` before deploying, and re-take the Settings, OAuth clients screenshots (new environment picker).
+4. **Resend:** if the sending domain is not verified, magic links now fail quietly (logged as `mail_send_failed`, code only). Check https://resend.com/domains before launch and watch the logs for that message.
+

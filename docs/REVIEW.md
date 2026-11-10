@@ -35,20 +35,29 @@ Fixed in this change (small and safe):
 - **P1-5 Header injection through threading.** `src/lib/backends/mime.ts`. The parent's Message-ID (from a received, attacker-controlled message) was copied into `In-Reply-To`/`References` without stripping CR/LF.
 - **P1-6 Retention copy did not match the code.** Privacy and security said "queue payloads expire after 24 hours". The code drops the payload when the send is terminal and keeps the record for 7 days. Privacy said "delivery logs kept for your plan's period", but the TTL is 90 days for every plan. Copy now matches the code. The security page's "we restrict outbound network access" was replaced by what the code does.
 
-Open (recorded, not fixed):
+Closed in the launch-hardening pass (10 Nov 2026). Regression tests: `tests/unit/m6-hardening.test.ts` (each fails on the code before the change):
+- **P1-8 FIXED** Webhook deliveries now have a lease. `Db.claimDelivery` (memory + Mongo, atomic on status and `nextAttemptAt`) runs first in `attemptDelivery`; the loser skips, and a finished delivery is never claimable. A crashed worker's delivery is due again after 2 min. Receivers still dedupe on `X-Webhook-Id` (at least once).
+- **P1-9 FIXED** `Db.claimSync`/`releaseSync` give each account one sync at a time. A refused caller marks the account dirty and the holder syncs once more before releasing (max 2 extra rounds), so a push that lands mid-sync is not left waiting.
+- **P1-10 FIXED (bounded, still at-least-once)** Gmail requests time out at 30 s, the Graph client has a 30 s budget, OAuth token/userinfo calls 15 s, Resend 10 s. A hung provider call now ends before the 60 s function limit and the 2 min outbox lease. A send that the provider accepted but whose answer was lost can still be retried; this stays documented as at-least-once.
+- **P1-11 FIXED** `authEnv` refuses to create an environment beyond the plan (`402 environment_limit`; Developer/Starter 1, Growth 3). Existing environments stay reachable. The delivery-log TTL follows the plan's `log_days` (7/30/90).
+- **P1-12 FIXED** `/api/oauth-clients` takes `environment` (GET/DELETE `?environment=`, PUT body), and Settings, OAuth clients has an environment picker.
+- **P1-13 FIXED** After inserting a new mailbox on a hard-capped plan, the org's mailboxes are ranked by (createdAt, id); the one past the allowance is removed and answers 402 `mailbox_limit`. Cost: the connect link of the loser is already used and must be reissued.
+- **P1-14 FIXED** `size="sm"` buttons are `min-h-11` on touch widths (`sm:min-h-8` from 640 px).
+- **P1-15 FIXED (by policy)** Terms now say a licence already issued stays valid to its expiry plus the 30 day grace after a refund, and that licences are not revoked remotely.
+
+Money paths, checked again (all in `tests/unit/m6-hardening.test.ts` and `billing.test.ts`):
+- Every handled event recomputes the entitlement from Stripe (`customer.subscription.*`, `invoice.*`, `checkout.session.completed`, `charge.refunded`), so order does not matter; the event id is stored only after success (a failure returns 500 and Stripe retries); duplicates answer `duplicate: true`. Unknown event types answer 200, are recorded and logged at debug. Plans are granted only by the webhook: the checkout redirect only makes the billing page poll.
+- **Fixed:** `payment_intent.succeeded` that arrives after the full refund of the same payment (out of order) used to grant the lifetime plan for money already returned. It now checks the charge on Stripe and skips the grant (if Stripe cannot be reached it grants as before and a later `charge.refunded` revokes).
+- Left as is, by decision C-27: any full refund on a customer cancels that customer's app subscriptions.
+
+Email: every request path that sends mail (magic link, team invite, endpoint-disabled notice) now uses `sendMailSafe`: a Resend rejection (bad address, 429, outage, timeout) logs a short code, never returns provider text, and no longer turns the request into a 500. One bounced owner does not stop the others.
+
+Still open:
 - **P1-7 `MASTER_KEY` has no rotation and no backup story.** `src/lib/secrets.ts`. If the key is lost or changed:
   - every stored token, IMAP password and BYO client secret becomes undecryptable;
   - every cursor is rejected;
   - every Gmail `?token=` and Graph `clientState` stops matching (push hooks 401 until watches are recreated).
-  - Fix: key id prefix on wrapped DEKs + re-wrap job. Until then, back the key up offline (MANUAL_STEPS G).
-- **P1-8 Webhook deliveries have no claim/lease.** The inline attempt, the cron, and the Vercel and Cloudflare crons running at the same time can POST the same delivery twice. The `X-Webhook-Id` is the same, so receivers can dedupe, but docs should say "at least once". Fix: `claimDelivery` like `claimOutbox`.
-- **P1-9 Concurrent syncs of one account.** A push hook and the poll cron can sync the same account at once and emit duplicate events. Fix: a per-account lease in `syncAccount`.
-- **P1-10 Outbox double send on slow providers.** `src/lib/send/outbox.ts`. The lease is 2 min, but the Gmail/Graph clients have no request timeout and the route's `maxDuration` is 60 s. A send killed after the provider accepted it is retried. This is documented as at-least-once. Fix: explicit 30 s timeouts on provider clients.
-- **P1-11 Plan limits not enforced for environments and log days.** `ensureEnvironment` creates all three environments on every plan (Developer/Starter sell 1). `log_days` is not applied (all logs live 90 days). Customers get more than they pay for, nobody is harmed. Enforce or change the plan table.
-- **P1-12 OAuth clients exist only for production.** `src/app/api/oauth-clients/route.ts` always uses the production environment, so Gmail/Microsoft connect links in staging/development answer 409 `oauth_client_missing`. Fix: an environment picker in the wizard.
-- **P1-13 Mailbox cap race.** `ensureCapacity` is check-then-insert. Two connects at the same moment can pass a hard cap by one.
-- **P1-14 44 px targets.** `src/components/ui/button.tsx` `size="sm"` is 32 px and is used 14 times in the dashboard. Fix: `min-h-11 sm:min-h-8`.
-- **P1-15 Self-host licence after refund.** A full refund cancels the subscription, but the issued offline licence stays valid to its `expiresAt` plus the 30-day grace. Accept and state it in terms, or issue monthly licences only.
+  - Why open: a key id prefix plus a re-wrap job changes the format of every stored secret and must be rehearsed against the production database with a backup, and the key backup itself is a human step. Not safe to ship untested and unattended. Until then: back the key up offline (MANUAL_STEPS G4).
 
 ## P2
 - DNS rebinding between our check and the socket's own lookup is still possible for IMAP/SMTP and webhooks. A full fix pins the resolved IP (connect by IP with SNI = host).

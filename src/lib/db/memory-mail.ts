@@ -62,6 +62,14 @@ export function createMemoryMailStore(app: string): MailStore {
       return a ? clone(a) : null;
     },
     async listAccounts(envId) { return [...accounts.values()].filter((a) => a.envId === envId).map(clone); },
+    async claimSync(id, now, leaseMs) {
+      const a = accounts.get(id);
+      if (!a) return false;
+      if (a.syncLeaseUntil && a.syncLeaseUntil > now) { accounts.set(id, { ...a, syncDirty: true }); return false; }
+      accounts.set(id, { ...a, syncLeaseUntil: new Date(now.getTime() + leaseMs), syncDirty: false });
+      return true;
+    },
+    async releaseSync(id) { const a = accounts.get(id); if (!a) return false; accounts.set(id, { ...a, syncLeaseUntil: null, syncDirty: false }); return !!a.syncDirty; },
     async updateAccount(id, patch) { const a = accounts.get(id); if (a) accounts.set(id, { ...a, ...clone(patch) }); },
     async dueAccounts(now, limit) {
       return [...accounts.values()]

@@ -158,6 +158,8 @@ export interface Db extends MailStore {
   listDeliveries(orgId: string, opts?: { endpointId?: string; limit?: number }): Promise<WebhookDelivery[]>;
   getDelivery(orgId: string, id: string): Promise<WebhookDelivery | null>;
   dueDeliveries(now: Date, limit: number): Promise<WebhookDelivery[]>;
+  /** Atomically takes a pending/retrying delivery that is due and leases it (nextAttemptAt = now + leaseMs). Null if someone else holds it or it is done. */
+  claimDelivery(id: string, now: Date, leaseMs: number): Promise<WebhookDelivery | null>;
 
   // mail suppression list
   addSuppression(s: Omit<Suppression, "at"> & { at?: Date }): Promise<void>;
