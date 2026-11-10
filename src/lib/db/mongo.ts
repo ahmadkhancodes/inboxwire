@@ -24,7 +24,10 @@ type WithId<T> = T & { _id: string };
 
 export function createMongoDb(uri: string, dbName: string, app: string): Db {
   let dbp: Promise<MongoDatabase> | null = null;
-  const db = () => (dbp ??= mongoClient(uri).then((c) => c.db(dbName)));
+  const db = () => (dbp ??= mongoClient(uri).then((c) => {
+    scheduleIndexes(uri, dbName);
+    return c.db(dbName);
+  }));
   const col = async <T extends Document>(name: string) => (await db()).collection<T>(name) as unknown as Collection<T>;
   const strip = <T>(d: (T & { _id?: unknown; app?: string }) | null): T | null => {
     if (!d) return null;
@@ -231,7 +234,29 @@ export function createMongoDb(uri: string, dbName: string, app: string): Db {
 
 /** Indexes, created once by scripts/ensure-indexes.ts (never per cold start). TTLs are on Date fields. */
 export async function ensureIndexes(uri: string, dbName: string) {
-  const d = (await mongoClient(uri)).db(dbName);
+  const raw = (await mongoClient(uri)).db(dbName);
+  // Index conflicts (85/86: same key, other options; 11000: existing duplicate data) are logged, not thrown,
+  // so one bad index never blocks the rest.
+  const d = new Proxy(raw, {
+    get(t, k) {
+      if (k !== "collection") return Reflect.get(t, k).bind?.(t) ?? Reflect.get(t, k);
+      return (name: string) => {
+        const c = t.collection(name);
+        return new Proxy(c, {
+          get(ct, ck) {
+            if (ck !== "createIndex") { const v = Reflect.get(ct, ck); return typeof v === "function" ? v.bind(ct) : v; }
+            return async (...a: Parameters<typeof ct.createIndex>) => {
+              try { return await ct.createIndex(...a); } catch (e) {
+                const code = (e as { code?: number }).code;
+                if (code !== 85 && code !== 86 && code !== 11000) throw e;
+                console.warn(`[db] index skipped on ${name}: code ${code}`);
+              }
+            };
+          },
+        });
+      };
+    },
+  });
   await d.collection("billing_accounts").createIndex({ app: 1, stripeCustomerId: 1 }, { unique: true, partialFilterExpression: { stripeCustomerId: { $type: "string" } } });
   await d.collection("stripe_events").createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 });
   await d.collection("rate_limits").createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 });
@@ -255,4 +280,26 @@ export async function ensureIndexes(uri: string, dbName: string) {
   await d.collection("organization").createIndex({ slug: 1 }, { unique: true });
   await d.collection("apikey").createIndex({ key: 1 });
   return DELIVERY_TTL_DAYS;
+}
+
+declare global {
+  var __kitIndexes: Map<string, Promise<void>> | undefined;
+}
+
+/** Runs ensureIndexes once per server instance, in the background. Never throws, never at build time. */
+export function scheduleIndexes(uri: string, dbName: string, run: (uri: string, db: string) => Promise<unknown> = ensureIndexes): Promise<void> | undefined {
+  if (process.env.NEXT_PHASE === "phase-production-build") return undefined;
+  const memo = (globalThis.__kitIndexes ??= new Map());
+  const key = `${uri}|${dbName}`;
+  const hit = memo.get(key);
+  if (hit) return hit;
+  const p = Promise.resolve()
+    .then(() => run(uri, dbName))
+    .then(() => undefined)
+    .catch((e: unknown) => {
+      memo.delete(key); // allow a retry; a cold start also retries
+      console.warn(`[db] ensureIndexes failed: ${String((e as Error)?.name ?? "Error")} ${(e as { code?: unknown })?.code ?? ""}`);
+    });
+  memo.set(key, p);
+  return p;
 }

@@ -75,3 +75,4 @@ Standing decisions are in docs/factory/BATCH1_PLAN.md (Mongo instead of Postgres
 - **IMAP connect never overwrites a mailbox row of another end user.** It proceeds only if the link's externalId (or, without one, the email) equals the row's externalId; otherwise 409 `mailbox_already_connected`. OAuth reconnects are unaffected, because the provider proves the mailbox.
 - **Org deletion revokes first.** `DELETE /api/account` runs `deleteOrgMailboxes` (revoke + delete + `deletion_record`, reason `org_deleted`) before `deleteOrgData`. Deletion records survive the org's data deletion as proof.
 - **`/api/health` stays liveness-only.** Mongo health is the `uptime-probe` database target.
+- **Indexes self-heal.** `scheduleIndexes` (mongo.ts) runs `ensureIndexes` once per instance in the background after first connect, skipped at build and for memory driver; conflicts (codes 85/86/11000) are logged and skipped, other errors warn and retry next cold start.
