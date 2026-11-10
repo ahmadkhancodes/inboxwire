@@ -4,12 +4,12 @@ import { StatusLamp } from "@/components/ui/status-lamp";
 import { Notice } from "@/components/ui/states";
 import { cn } from "@/components/ui/cn";
 import { ogImages, twitterImages } from "@/lib/seo";
-import { product } from "@/config/product";
+import { product, cadence } from "@/config/product";
 import { loadStatus, STATUS_DAYS, type DayState, type TargetSummary } from "@/lib/status";
 import { log } from "@/lib/logger";
 
 const title = "Status";
-const description = `Live and 90 day uptime for ${product.fullName}: REST API and database, probed every 5 minutes.`;
+const description = `${cadence.statusLead} for ${product.fullName}: REST API and database, probed ${cadence.probeShort}.`;
 
 export const metadata: Metadata = {
   title,
@@ -57,11 +57,11 @@ export default async function StatusPage() {
             : anyDown
               ? "We are seeing failed checks."
               : allUp
-                ? "Every line is live."
+                ? "Every check passed."
                 : "Waiting for the first probe results."}
         </p>
         <p className="body-6 text-text-subtle">
-          Probed every 5 minutes from our own cron.
+          {cadence.probeSentence}
           {lastChecked ? <> Last check <time dateTime={lastChecked.toISOString()}>{lastChecked.toISOString().slice(0, 16).replace("T", " ")} UTC</time>.</> : null}
         </p>
       </div>

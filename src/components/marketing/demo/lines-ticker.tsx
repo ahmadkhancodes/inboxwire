@@ -1,17 +1,18 @@
+import { cadence } from "@/config/product";
 import { StatusLamp, type LampState } from "@/components/ui/status-lamp";
 
 interface Line { id: string; provider: string; state: LampState; last: string; mode: string }
 const LINES: Line[] = [
   { id: "ops@northwind-crm.example", provider: "Google", state: "live", last: "2 s ago", mode: "push" },
   { id: "dana@harbor-law.example", provider: "Microsoft", state: "live", last: "9 s ago", mode: "push" },
-  { id: "intake@kestrel-ats.example", provider: "IMAP", state: "syncing", last: "41 s ago", mode: "polling" },
+  { id: "intake@kestrel-ats.example", provider: "IMAP", state: "syncing", last: cadence.demoImapLast, mode: "polling" },
   { id: "m.okafor@tidewater.example", provider: "Google", state: "error", last: "3 h ago", mode: "push" },
 ];
 interface Stamp { t: string; type: string; line: string; code: number; ms?: number; retry?: string }
 const TAPE: Stamp[] = [
   { t: "14:02:07", type: "messageNew", line: "ops@northwind…", code: 200, ms: 84 },
   { t: "14:01:58", type: "messageMoved", line: "dana@harbor…", code: 200, ms: 112 },
-  { t: "14:01:31", type: "messageNew", line: "intake@kestrel…", code: 500, retry: "14:02:31" },
+  { t: "14:01:31", type: "messageNew", line: "intake@kestrel…", code: 500, retry: cadence.demoRetry },
   { t: "14:01:12", type: "messageSent", line: "ops@northwind…", code: 200, ms: 97 },
 ];
 
