@@ -72,3 +72,4 @@ New KIT_COPY rule to verify: the primary colour family must not repeat another B
 8. NEXT: M5: review DONE (docs/REVIEW.md, 6 Nov). Still: owner blockers in MANUAL_STEPS G, open P1s in REVIEW.md, deploy, QA, Lighthouse 90+, scorecard, launch checklist, runbooks.
 9. After each milestone: lint + typecheck + tests + build, deploy, `scripts/vercel-keep-latest-3.sh inboxwire`, update this file, PR, merge, one-line `send_message` to session_01Mn59CnGYFsETSnQdPMcWxP.
 Tooling notes: no `rsync` in the container (use tar); Vercel MCP connector is the OLD account (use REST/CLI with VERCEL_TOKEN_NEW_ACCOUNT); GitHub PR tools need owner+repo; kit-v1 clone is at /home/user/postslot (re-clone if the container is new).
+- 10 Nov: indexes now auto-create once per server instance on first Mongo connection (background, scrubbed warn on failure); `npm run db:indexes` unchanged.
