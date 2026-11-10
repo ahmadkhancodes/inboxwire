@@ -34,7 +34,7 @@ function Params({ title, rows }: { title: string; rows: Prop[] }) {
   return (
     <div className="flex flex-col gap-2">
       <h4 className="caption-3 text-text-muted">{title}</h4>
-      <div className="overflow-x-auto rounded-md border border-border">
+      <div className="relative max-w-full overflow-x-auto rounded-md border border-border">
         <table className="w-full min-w-96 text-left">
           <thead className="bg-surface-sunken"><tr><th scope="col" className="caption-3 px-3 py-2 text-text-muted">Name</th><th scope="col" className="caption-3 px-3 py-2 text-text-muted">Type</th><th scope="col" className="caption-3 px-3 py-2 text-text-muted">Notes</th></tr></thead>
           <tbody>
