@@ -28,6 +28,7 @@ export function resendTransport(apiKey: string, fetchFn: typeof fetch = fetch): 
     async send(msg): Promise<SendResult> {
       const res = await fetchFn("https://api.resend.com/emails", {
         method: "POST",
+        signal: AbortSignal.timeout(10_000),
         headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
         body: JSON.stringify({
           from: msg.from, to: msg.to, subject: msg.subject, text: msg.text, html: msg.html,

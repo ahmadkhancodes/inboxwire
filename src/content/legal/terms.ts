@@ -48,6 +48,7 @@ export const terms: LegalDoc = {
       body: [
         "Paid Cloud plans and self-host licences are billed in advance through Stripe, monthly or annually as you choose. Fees exclude sales tax and VAT unless stated. The Developer plan is free and subject to its limits.",
         "Subscriptions renew until canceled. You can cancel at any time and the cancellation takes effect at the end of the paid period. Fees already paid are not refunded unless the law requires it. If a payment fails, your plan continues for a grace period of " + p.graceDays + " days, after which limits fall to those of the Developer plan.",
+        "Self-host licences work offline. If a payment is refunded in full, the subscription ends and no new licence is issued, but a licence already issued stays valid until its own expiry date plus the 30 day grace period. We do not revoke issued licences remotely.",
         "We may change prices for future periods with notice. Self-host prices are locked for the term stated on the pricing page.",
       ],
     },

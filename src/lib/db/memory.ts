@@ -133,6 +133,13 @@ export function createMemoryDb(app: string, config: Record<string, string> = {})
       const d = deliveries.get(id);
       return d && d.orgId === orgId ? clone(d) : null;
     },
+    async claimDelivery(id, now, leaseMs) {
+      const d = deliveries.get(id);
+      if (!d || (d.status !== "pending" && d.status !== "retrying") || !d.nextAttemptAt || d.nextAttemptAt > now) return null;
+      const next = { ...d, nextAttemptAt: new Date(now.getTime() + leaseMs), updatedAt: now };
+      deliveries.set(id, next);
+      return clone(next);
+    },
     async dueDeliveries(now, limit) {
       return [...deliveries.values()]
         .filter((d) => (d.status === "pending" || d.status === "retrying") && d.nextAttemptAt && d.nextAttemptAt <= now)

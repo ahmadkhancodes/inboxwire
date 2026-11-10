@@ -11,7 +11,7 @@ import { NONE, cancelAppSubscriptions, computeEntitlement, invoiceSubscriptionId
 //  - checkout.session.completed also triggers a recompute
 
 export interface WebhookDeps {
-  stripe: Pick<Stripe, "subscriptions" | "webhooks">;
+  stripe: Pick<Stripe, "subscriptions" | "webhooks"> & Partial<Pick<Stripe, "paymentIntents">>;
   db: Db;
   secret: string;
   now?: () => number;
@@ -60,7 +60,10 @@ export async function handleStripeWebhook(rawBody: string, signature: string | n
   if (event.type === "payment_intent.succeeded") {
     const plan = obj.metadata?.plan;
     const match = obj.metadata?.lookup_key ? planForLookupKey(obj.metadata.lookup_key) : null;
-    if (obj.metadata?.app === app && obj.metadata?.mode === "lifetime" && obj.id && match) {
+    // Out of order: `charge.refunded` can arrive before this event. Never grant a lifetime plan for money already paid back.
+    const refunded = obj.id && stripe.paymentIntents ? await paymentIntentRefunded(stripe.paymentIntents, obj.id) : false;
+    if (refunded) log.info("pi_refunded_before_success", { code: "skip_grant" });
+    else if (obj.metadata?.app === app && obj.metadata?.mode === "lifetime" && obj.id && match) {
       await db.setEntitlement(orgId, lifetimeEntitlement(match.plan.id, obj.id, now));
       await deps.onChange?.(orgId, event.type);
     } else if (plan) log.debug("pi_ignored", { code: "not_lifetime" });
@@ -90,6 +93,17 @@ export async function handleStripeWebhook(rawBody: string, signature: string | n
     await deps.onChange?.(orgId, event.type);
     if (event.type === "invoice.paid" && obj.id) await deps.onInvoicePaid?.({ orgId, invoiceId: obj.id, entitlement: next });
   }
+  else log.debug("stripe_event_ignored", { code: event.type }); // unknown or irrelevant type: answer 200 so Stripe stops retrying
   await db.markStripeEvent(event.id, event.type); // only after success
   return json({ received: true });
+}
+
+async function paymentIntentRefunded(pis: Pick<Stripe["paymentIntents"], "retrieve">, id: string): Promise<boolean> {
+  try {
+    const pi = await pis.retrieve(id, { expand: ["latest_charge"] });
+    const ch = pi.latest_charge;
+    return !!ch && typeof ch !== "string" && (ch.refunded === true || (ch.amount_refunded > 0 && ch.amount_refunded >= ch.amount));
+  } catch {
+    return false; // cannot check: grant as before (a later `charge.refunded` still revokes it)
+  }
 }

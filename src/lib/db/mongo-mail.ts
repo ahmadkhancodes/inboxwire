@@ -54,6 +54,19 @@ export function createMongoMailStore(getDb: () => Promise<MongoDatabase>, app: s
     async findAccountByEmail(envId, email) { return strip<MailAccount>(await (await col<WithId<MailAccount>>("accounts")).findOne({ app, envId, email: email.toLowerCase() })); },
     async findAccountByWatchId(watchId) { return strip<MailAccount>(await (await col<WithId<MailAccount>>("accounts")).findOne({ app, "watch.id": watchId })); },
     async listAccounts(envId) { return stripAll<MailAccount>(await (await col<WithId<MailAccount>>("accounts")).find({ app, envId }).sort({ createdAt: 1 }).toArray()); },
+    async claimSync(id, now, leaseMs) {
+      const r = await (await col<WithId<MailAccount>>("accounts")).updateOne(
+        { _id: id, app, $or: [{ syncLeaseUntil: null }, { syncLeaseUntil: { $exists: false } }, { syncLeaseUntil: { $lte: now } }] },
+        { $set: { syncLeaseUntil: new Date(now.getTime() + leaseMs), syncDirty: false } },
+      );
+      if (r.modifiedCount === 1) return true;
+      await (await col<WithId<MailAccount>>("accounts")).updateOne({ _id: id, app }, { $set: { syncDirty: true } });
+      return false;
+    },
+    async releaseSync(id) {
+      const r = await (await col<WithId<MailAccount>>("accounts")).findOneAndUpdate({ _id: id, app }, { $set: { syncLeaseUntil: null, syncDirty: false } }, { returnDocument: "before" });
+      return !!(r as { syncDirty?: boolean } | null)?.syncDirty;
+    },
     async updateAccount(id, patch) { await (await col<WithId<MailAccount>>("accounts")).updateOne({ _id: id, app }, { $set: patch }); },
     async dueAccounts(now, limit) {
       return stripAll<MailAccount>(await (await col<WithId<MailAccount>>("accounts"))

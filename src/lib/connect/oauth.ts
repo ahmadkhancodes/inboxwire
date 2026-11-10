@@ -46,6 +46,7 @@ export interface TokenSet { accessToken: string; refreshToken: string | null; ex
 
 async function tokenCall(provider: OAuthProvider, body: Record<string, string>, fetchFn: typeof fetch, now: Date): Promise<TokenSet> {
   const res = await fetchFn(ENDPOINTS[provider].token, {
+    signal: AbortSignal.timeout(15_000),
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams(body).toString(),
@@ -73,7 +74,7 @@ export async function resolveEmail(provider: OAuthProvider, t: TokenSet, fetchFn
     } catch { /* fall through */ }
   }
   const url = provider === "google" ? "https://openidconnect.googleapis.com/v1/userinfo" : "https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName";
-  const res = await fetchFn(url, { headers: { authorization: `Bearer ${t.accessToken}` } });
+  const res = await fetchFn(url, { signal: AbortSignal.timeout(15_000), headers: { authorization: `Bearer ${t.accessToken}` } });
   const j = (await res.json().catch(() => ({}))) as { email?: string; mail?: string; userPrincipalName?: string };
   const e = j.email ?? j.mail ?? j.userPrincipalName;
   if (!res.ok || !e) throw new Error("oauth_no_email");

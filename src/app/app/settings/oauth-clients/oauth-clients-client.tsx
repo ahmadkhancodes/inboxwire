@@ -23,7 +23,7 @@ function Mono({ children }: { children: string }) {
   );
 }
 
-function ProviderPanel({ provider, data, canManage, reload }: { provider: Provider; data: Data; canManage: boolean; reload: () => void }) {
+function ProviderPanel({ provider, data, canManage, reload, environment }: { provider: Provider; data: Data; canManage: boolean; reload: () => void; environment: string }) {
   const info = data.info[provider];
   const saved = data.clients.find((c) => c.provider === provider);
   const [clientId, setClientId] = useState(saved?.clientId ?? "");
@@ -36,7 +36,7 @@ function ProviderPanel({ provider, data, canManage, reload }: { provider: Provid
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true); setMsg(null);
-    const r = await api("/api/oauth-clients", { method: "PUT", body: { provider, clientId: clientId.trim(), clientSecret: secret, pubsubTopic: topic.trim() || undefined, pubsubServiceAccount: sa.trim() || undefined } });
+    const r = await api("/api/oauth-clients", { method: "PUT", body: { environment, provider, clientId: clientId.trim(), clientSecret: secret, pubsubTopic: topic.trim() || undefined, pubsubServiceAccount: sa.trim() || undefined } });
     setBusy(false);
     if (!r.ok) {
       return setMsg({ ok: false, text: r.code === "invalid_input" ? "Check the client id, secret and Pub/Sub fields: one of them does not look right." : r.message });
@@ -91,9 +91,25 @@ function ProviderPanel({ provider, data, canManage, reload }: { provider: Provid
   );
 }
 
+const ENVS = ["production", "staging", "development"] as const;
+
 export function OAuthClientsClient({ canManage }: { canManage: boolean }) {
+  const [environment, setEnvironment] = useState<string>("production");
+  return (
+    <div className="flex flex-col gap-6">
+      <Field label="Environment" htmlFor="oauth-env" hint="Each environment has its own OAuth clients, so staging and development connect links work too.">
+        <select id="oauth-env" value={environment} onChange={(e) => setEnvironment(e.target.value)} className="min-h-11 w-full max-w-xs rounded-md border border-border bg-surface-raised px-3 text-text">
+          {ENVS.map((n) => <option key={n} value={n}>{n}</option>)}
+        </select>
+      </Field>
+      <Inner key={environment} environment={environment} canManage={canManage} />
+    </div>
+  );
+}
+
+function Inner({ environment, canManage }: { environment: string; canManage: boolean }) {
   const state = useAsync(async () => {
-    const r = await api<Data>("/api/oauth-clients");
+    const r = await api<Data>(`/api/oauth-clients?environment=${environment}`);
     if (!r.ok) throw new Error(r.message);
     return r.data;
   });
@@ -101,8 +117,8 @@ export function OAuthClientsClient({ canManage }: { canManage: boolean }) {
   if (state.error || !state.data) return <ErrorState title="Could not load OAuth clients" body="Reload the page. If it keeps failing, check the status page." />;
   return (
     <div className="flex flex-col gap-6">
-      <ProviderPanel provider="google" data={state.data} canManage={canManage} reload={state.reload} />
-      <ProviderPanel provider="microsoft" data={state.data} canManage={canManage} reload={state.reload} />
+      <ProviderPanel provider="google" data={state.data} canManage={canManage} reload={state.reload} environment={environment} />
+      <ProviderPanel provider="microsoft" data={state.data} canManage={canManage} reload={state.reload} environment={environment} />
     </div>
   );
 }

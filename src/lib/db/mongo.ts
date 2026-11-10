@@ -181,6 +181,14 @@ export function createMongoDb(uri: string, dbName: string, app: string): Db {
     async getDelivery(orgId, id) {
       return strip<WebhookDelivery>(await (await col<WithId<WebhookDelivery>>("webhook_deliveries")).findOne({ _id: id, orgId, app }));
     },
+    async claimDelivery(id, now, leaseMs) {
+      const r = await (await col<WithId<WebhookDelivery>>("webhook_deliveries")).findOneAndUpdate(
+        { _id: id, app, status: { $in: ["pending", "retrying"] }, nextAttemptAt: { $lte: now } },
+        { $set: { nextAttemptAt: new Date(now.getTime() + leaseMs), updatedAt: now } },
+        { returnDocument: "after" },
+      );
+      return strip<WebhookDelivery>(r);
+    },
     async dueDeliveries(now, limit) {
       const docs = await (await col<WithId<WebhookDelivery>>("webhook_deliveries"))
         .find({ app, status: { $in: ["pending", "retrying"] }, nextAttemptAt: { $lte: now } })

@@ -15,6 +15,9 @@ export type Emit = (orgId: string, type: string, data: unknown, ctx?: { envId: s
 export interface BackendDeps { fetchFn?: typeof fetch; imapFactory?: ImapFactory; gmail?: (accessToken: string) => GmailLike; graph?: (accessToken: string) => GraphLike; smtp?: SmtpTransportFactory; now?: Date; lookup?: Lookup }
 
 const FRESH_MS = 60_000;
+/** Whole-client budget for Graph (one signal per client) and per-request for Gmail; below the 60 s function limit. */
+const PROVIDER_TIMEOUT_MS = 30_000;
+const SYNC_LEASE_MS = 2 * 60_000;
 
 /** Decrypts credentials (refreshing an expired OAuth access token) and builds the right MailBackend. */
 export async function backendFor(db: Db, account: MailAccount, deps: BackendDeps = {}): Promise<MailBackend> {
@@ -55,17 +58,40 @@ async function realGmail(token: string): Promise<GmailLike> {
   const { OAuth2Client } = await import("google-auth-library");
   const auth = new OAuth2Client();
   auth.setCredentials({ access_token: token });
-  return gmail({ version: "v1", auth }) as unknown as GmailLike;
+  // Explicit request timeout: a hung provider call must end before the route's 60 s maxDuration and the 2 min outbox lease.
+  return gmail({ version: "v1", auth, timeout: PROVIDER_TIMEOUT_MS }) as unknown as GmailLike;
 }
 async function realGraph(token: string): Promise<GraphLike> {
   const { Client } = await import("@microsoft/microsoft-graph-client");
-  return Client.init({ authProvider: (done) => done(null, token) }) as unknown as GraphLike;
+  return Client.init({ authProvider: (done) => done(null, token), fetchOptions: { signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS) } }) as unknown as GraphLike;
 }
 
 export interface SyncOutcome { accountId: string; events: number; ok: boolean; error?: string }
 
 /** Runs one sync for an account: loads the cursor, syncs, stores the new cursor, emits webhook events, schedules the next poll. */
 export async function syncAccount(db: Db, accountId: string, deps: BackendDeps & { emit?: Emit; pollEveryMs?: number; deliverBudgetMs?: number } = {}): Promise<SyncOutcome> {
+  const now = deps.now ?? new Date();
+  // One sync per account at a time (a push hook and the poll cron can arrive together). A refused caller marks the
+  // account dirty, and the holder syncs once more before it lets go, so a change that lands mid-sync is not left waiting.
+  if (!(await db.claimSync(accountId, now, SYNC_LEASE_MS))) return { accountId, events: 0, ok: true, error: "sync_in_progress" };
+  let held = true;
+  try {
+    let out = await syncOnce(db, accountId, deps);
+    for (let i = 0; i < 2 && out.ok; i++) {
+      held = false;
+      if (!(await db.releaseSync(accountId))) return out;
+      if (!(await db.claimSync(accountId, now, SYNC_LEASE_MS))) return out;
+      held = true;
+      const again = await syncOnce(db, accountId, deps);
+      out = { ...again, events: out.events + again.events };
+    }
+    return out;
+  } finally {
+    if (held) await db.releaseSync(accountId).catch(() => false);
+  }
+}
+
+async function syncOnce(db: Db, accountId: string, deps: BackendDeps & { emit?: Emit; pollEveryMs?: number; deliverBudgetMs?: number }): Promise<SyncOutcome> {
   const account = await db.getAccount(accountId);
   if (!account) return { accountId, events: 0, ok: false, error: "not_found" };
   const now = deps.now ?? new Date();
