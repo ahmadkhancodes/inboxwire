@@ -203,6 +203,8 @@
   :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   ::selection { background: var(--action); color: var(--action-text); }
   code, kbd, pre, samp { font-family: var(--font-mono-family); }
+  /* Inline code may wrap at any point so long URLs never force sideways scroll; pre keeps scrolling in its own box. */
+  :not(pre) > code { overflow-wrap: anywhere; word-break: break-word; }
 }
 
 /* Scroll reveal (rise 32px + fade, once). Reduced motion: opacity only. */
