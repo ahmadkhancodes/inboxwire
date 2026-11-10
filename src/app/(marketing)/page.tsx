@@ -7,13 +7,15 @@ import {
   type FaqItem, type Feature, type ProblemItem, type Step,
 } from "@/components/marketing";
 import { LinesTicker, Tape } from "@/components/marketing/demo/lines-ticker";
+import { ogImages, twitterImages } from "@/lib/seo";
 import { product } from "@/config/product";
 
 export const metadata: Metadata = {
   title: { absolute: `${product.fullName}: email sync API for Gmail, Microsoft 365 and IMAP` },
   description: product.description,
   alternates: { canonical: "/" },
-  openGraph: { title: `${product.fullName}: ${product.tagline}`, description: product.description, url: "/" },
+  openGraph: { title: `${product.fullName}: ${product.tagline}`, description: product.description, url: "/", images: ogImages() },
+  twitter: { card: "summary_large_image", images: twitterImages() },
 };
 
 const problems: ProblemItem[] = [

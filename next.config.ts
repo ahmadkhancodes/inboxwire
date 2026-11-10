@@ -21,6 +21,10 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [{ source: "/v1/:path*", destination: "/api/v1/:path*" }];
   },
+  // Browsers ask for /favicon.ico; the real icon is the generated /icon route.
+  async redirects() {
+    return [{ source: "/favicon.ico", destination: "/icon", permanent: true }];
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders() }];
   },

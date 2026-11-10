@@ -3,6 +3,7 @@ import { Section } from "@/components/ui/layout";
 import { StatusLamp } from "@/components/ui/status-lamp";
 import { Notice } from "@/components/ui/states";
 import { cn } from "@/components/ui/cn";
+import { ogImages, twitterImages } from "@/lib/seo";
 import { product } from "@/config/product";
 import { loadStatus, STATUS_DAYS, type DayState, type TargetSummary } from "@/lib/status";
 import { log } from "@/lib/logger";
@@ -14,7 +15,8 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: "/status" },
-  openGraph: { title: `${title} · ${product.fullName}`, description, url: "/status" },
+  openGraph: { title: `${title} · ${product.fullName}`, description, url: "/status", images: ogImages() },
+  twitter: { card: "summary_large_image", images: twitterImages() },
 };
 
 /** Static page, rebuilt at most once a minute from the uptime_checks collection. */
