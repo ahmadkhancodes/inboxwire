@@ -13,3 +13,14 @@ for (const path of [...new Set(paths)]) {
     expect(scroll).toBeLessThanOrEqual(inner);
   });
 }
+
+test("long URL in inline code wraps instead of overflowing at 375px", async ({ page }) => {
+  await page.goto("/docs/api");
+  await page.evaluate(() => {
+    const code = [...document.querySelectorAll("p.body-3 code")].find((c) => c.closest("p")?.textContent?.includes("Base URL"));
+    if (!code) throw new Error("base URL paragraph not found");
+    code.textContent = "https://inboxwire.buffersoltech.com/v1";
+  });
+  const { scroll, inner } = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
+  expect(scroll).toBeLessThanOrEqual(inner);
+});
