@@ -3,6 +3,7 @@ import { Section } from "@/components/ui/layout";
 import { ButtonLink } from "@/components/ui/button";
 import { CasaCalculator } from "@/components/marketing/casa-calculator";
 import { Faq } from "@/components/marketing/faq";
+import { ogImages, twitterImages } from "@/lib/seo";
 import { product } from "@/config/product";
 
 const title = "Free CASA Readiness Kit";
@@ -12,7 +13,8 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: "/casa" },
-  openGraph: { title: `${title} · ${product.fullName}`, description, url: "/casa" },
+  openGraph: { title: `${title} · ${product.fullName}`, description, url: "/casa", images: ogImages() },
+  twitter: { card: "summary_large_image", images: twitterImages() },
 };
 
 const kit = [

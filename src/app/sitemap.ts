@@ -14,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: u("/casa"), lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: u("/docs"), lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     ...docs.map((d) => ({ url: u(`/docs/${d.slug}`), lastModified: now, changeFrequency: "monthly" as const, priority: 0.6 })),
+    { url: u("/compare"), lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     ...compareEntries.map((c) => ({ url: u(`/compare/${c.slug}`), lastModified: now, changeFrequency: "monthly" as const, priority: 0.8 })),
     ...legalDocs.map((d) => ({ url: u(`/legal/${d.slug}`), lastModified: now, changeFrequency: "yearly" as const, priority: 0.3 })),
   ];
