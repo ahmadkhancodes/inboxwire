@@ -46,17 +46,17 @@ export const product = {
   companyUrl: "https://buffersoltech.com",
   host: "inboxwire.buffersoltech.com",
   url: process.env.NEXT_PUBLIC_APP_URL ?? "https://inboxwire.buffersoltech.com",
-  supportEmail: "support@buffersoltech.com",
-  legalEmail: "legal@buffersoltech.com",
+  supportEmail: "contact@buffersoltech.com",
+  legalEmail: "contact@buffersoltech.com",
   mailFrom: "Inboxwire by BufferSol <no-reply@inboxwire.buffersoltech.com>",
   description:
     "One REST API and signed webhooks over your users' Gmail, Microsoft 365 and IMAP mailboxes. Run it on your servers for $708 a year, or let us run it from $24.99 a month.",
   tagline: "Your users' Gmail, Outlook and IMAP: one API, every line watched",
   /** Legal entity details used by the legal templates. */
   legal: {
-    entity: "BufferSol Technologies",
-    jurisdiction: "{{jurisdiction}}",
-    address: "{{registered address}}",
+    entity: "BufferSol Technologies LLC",
+    jurisdiction: "the State of New York, United States",
+    address: "447 W Broadway, 2nd Floor Suite #1964, New York, NY 10013, United States",
     effectiveDate: "2026-11-05",
   },
   subProcessors: [
