@@ -117,14 +117,17 @@
   --spacing-20: 80px;
   --spacing-24: 96px;
 
+  /* Hero heading, subheading and tagline measure (landing page library B5). */
+  --container-hero: 680px;
+
   --ease-out-kit: cubic-bezier(0.22, 1, 0.36, 1);
   --default-transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   --default-transition-duration: 300ms;
 }
 
 /* ---- Named type styles (playbook §5). Use these, never loose size+weight pairs. ---- */
-@utility heading-1 { font-family: var(--font-display-family); font-size: 3.75rem; line-height: 1; font-weight: 700; letter-spacing: -0.015em; text-wrap: balance; }
-@utility heading-2 { font-family: var(--font-display-family); font-size: 3rem; line-height: 1; font-weight: 700; letter-spacing: -0.015em; text-wrap: balance; }
+@utility heading-1 { font-family: var(--font-display-family); font-size: 3.75rem; line-height: 1; font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; }
+@utility heading-2 { font-family: var(--font-display-family); font-size: 3rem; line-height: 1; font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; }
 @utility heading-3 { font-family: var(--font-display-family); font-size: 2.25rem; line-height: 2.5rem; font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; }
 @utility heading-4 { font-family: var(--font-display-family); font-size: 1.875rem; line-height: 2.25rem; font-weight: 600; letter-spacing: -0.01em; text-wrap: balance; }
 @utility heading-5 { font-family: var(--font-display-family); font-size: 1.5rem; line-height: 2rem; font-weight: 600; text-wrap: balance; }
@@ -181,7 +184,7 @@
 /* Scroll reveal (rise 32px + fade, once). Reduced motion: opacity only. */
 .kit-reveal { opacity: 0; transform: translateY(32px); transition: opacity 700ms var(--ease-out-kit), transform 700ms var(--ease-out-kit); }
 .kit-reveal[data-visible="true"] { opacity: 1; transform: none; }
-.kit-word { opacity: 0.35; transition: opacity 300ms var(--ease-out-kit), background-color 300ms var(--ease-out-kit); }
+.kit-word { opacity: 0.3; transition: opacity 300ms var(--ease-out-kit); }
 .kit-word[data-on="true"] { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
   .kit-reveal { transform: none; transition: opacity 300ms var(--ease-out-kit); }

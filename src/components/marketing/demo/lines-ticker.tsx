@@ -41,7 +41,7 @@ export function LinesTicker() {
       <div className="border border-border-strong bg-surface-raised">
         <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-2 font-mono caption-5 text-text-subtle">
           <span><span className="text-text">northwind-crm</span> / production / lines</span>
-          <span className="hidden sm:inline">4 lines · 3 healthy · 1 needs sign-in</span>
+          <span className="hidden sm:inline">4 lines · 3 healthy · 1 needs a new sign in</span>
         </div>
         <div className="grid lg:grid-cols-12">
           <table className="w-full table-fixed border-collapse text-left lg:col-span-8">

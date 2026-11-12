@@ -9,5 +9,5 @@ export { PricingTable } from "./pricing-table";
 export { Faq, type FaqItem } from "./faq";
 export { TaglineReveal } from "./tagline-reveal";
 export { FinalCta } from "./final-cta";
-export { Proof } from "./proof";
+export { Proof, ProofFacts, type ProofFact } from "./proof";
 export { PageIntro } from "./page-intro";

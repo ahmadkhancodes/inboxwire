@@ -38,8 +38,9 @@ describe("design system (docs/design-brief.md)", () => {
     for (const r of ["lg", "xl", "2xl", "3xl"]) expect(css).toMatch(new RegExp(`--radius-${r}:\\s*0px`));
   });
 
-  it("has no glassmorphism or background gradients in components", () => {
-    expect(files.filter(([, c]) => /backdrop-blur|bg-gradient-|bg-linear-/.test(c)).map(([p]) => p)).toEqual([]);
+  it("has no glassmorphism or background gradients in components (blur only on the floating marketing nav)", () => {
+    expect(files.filter(([p, c]) => /bg-gradient-|bg-linear-|linear-gradient\(/.test(c) && !p.endsWith("globals.css")).map(([p]) => p)).toEqual([]);
+    expect(files.filter(([p, c]) => /backdrop-blur/.test(c) && !p.endsWith("site-header.tsx")).map(([p]) => p)).toEqual([]);
   });
 
   it("app navigation is a text index without an icon per item", () => {

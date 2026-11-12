@@ -2,45 +2,64 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Section } from "@/components/ui/layout";
 
-/** A large statement whose words light up one by one as it scrolls through the viewport. */
+/** Trigger line at 60% of the viewport height: a word lights up once it has scrolled above it. */
+export const TAGLINE_ROOT_MARGIN = "0px 0px -40% 0px";
+
+export function taglineWords(text: string): string[] {
+  return text.split(/\s+/).filter(Boolean);
+}
+
+/**
+ * Large statement (landing page library B11). Each word starts at 30% opacity of the band's text colour and
+ * turns full colour as it crosses the trigger line, one IntersectionObserver entry per word, once.
+ * Under prefers-reduced-motion every word is on from the start (and the CSS drops the transition).
+ */
 export function TaglineReveal({ text, label }: { text: string; label?: string }) {
-  const words = useMemo(() => text.split(/\s+/).filter(Boolean), [text]);
+  const words = useMemo(() => taglineWords(text), [text]);
   const ref = useRef<HTMLParagraphElement>(null);
-  const [active, setActive] = useState(0);
+  const [on, setOn] = useState<ReadonlySet<number>>(() => new Set());
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    let frame = 0;
-    const update = () => {
-      frame = 0;
-      const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight;
-      // 0 when the block enters at 85% of the viewport, 1 once it has travelled its own height plus 35% of the viewport.
-      const p = Math.min(1, Math.max(0, (vh * 0.85 - rect.top) / (rect.height + vh * 0.35)));
-      const next = Math.round(p * words.length);
-      setActive((prev) => (prev === next ? prev : next));
-    };
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
-    schedule();
-    window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
-    return () => {
-      if (frame) cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
-    };
-  }, [words.length]);
+    const all = () => setOn(new Set(words.map((_, i) => i)));
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || typeof IntersectionObserver === "undefined") {
+      all();
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        let upTo = -1;
+        for (const e of entries) {
+          const above = e.boundingClientRect.bottom < (e.rootBounds?.top ?? 0);
+          if (e.target === el) {
+            // A jump (anchor link, fast flick) can carry words past the line without crossing it: finish them all.
+            if (!e.isIntersecting && above) upTo = words.length - 1;
+            continue;
+          }
+          if (e.isIntersecting || above) {
+            upTo = Math.max(upTo, Number((e.target as HTMLElement).dataset.i));
+            io.unobserve(e.target);
+          }
+        }
+        // Reading order: a word never lights up before the words in front of it.
+        if (upTo >= 0) setOn((prev) => (prev.size > upTo ? prev : new Set(words.slice(0, upTo + 1).map((_, i) => i))));
+      },
+      { rootMargin: TAGLINE_ROOT_MARGIN },
+    );
+    io.observe(el);
+    el.querySelectorAll<HTMLElement>("[data-i]").forEach((w) => io.observe(w));
+    return () => io.disconnect();
+  }, [words]);
 
   return (
-    <Section tone="inverse" size="lg">
+    <Section tone="inverse" size="lg" labelledBy="tagline-title">
       <div className="grid gap-x-6 gap-y-4 lg:grid-cols-12">
         <p className="font-mono caption-5 text-text-inverse/70 lg:col-span-2 lg:pt-2">{label ?? "Data handling"}:</p>
-        <p ref={ref} className="heading-4 md:heading-2 lg:heading-1 max-w-5xl lg:col-span-10">
+        <h2 id="tagline-title" className="sr-only">{text}</h2>
+        <p ref={ref} aria-hidden className="heading-4 md:heading-3 lg:heading-2 max-w-hero lg:col-span-10">
           {words.map((w, i) => (
-            <span key={i} className="kit-word" data-on={i < active}>
+            <span key={i} data-i={i} className="kit-word" data-on={on.has(i)}>
               {w}{" "}
             </span>
           ))}
