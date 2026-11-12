@@ -48,6 +48,7 @@ The container entrypoint runs the same check on every start and logs the result.
 
 ## Operate
 - **Health:** `GET /api/health`. **Metrics:** `GET /metrics` with `Authorization: Bearer $METRICS_TOKEN` (Prometheus text: mailboxes by state, outbox and delivery counts).
+- **Reverse proxy and client IPs:** run the app behind a reverse proxy (nginx, Caddy, Traefik) that sets `X-Forwarded-For`, and set `TRUSTED_PROXIES` to the proxy's address or CIDR (for example `172.18.0.0/16`). Sign-in and connect-page rate limits key on the client IP; exposed directly, a client could send its own header and pick a fresh bucket for every request.
 - **Private networks:** IMAP/SMTP hosts and webhook URLs that resolve to loopback, private, link-local or single-label names are refused. If your mail server or webhook receiver is on your own network, set `ALLOW_PRIVATE_NETWORK_TARGETS=1`.
 - **Backups:** the `mongo-data` volume, or `docker compose exec -T mongo mongodump --archive > backup.archive`.
 - **Update:** set `INBOXWIRE_VERSION` to a release tag without the `v`, then `docker compose pull && docker compose up -d`. The worker creates the MongoDB indexes (the `ensure-indexes` job) each time it starts, so an update needs no manual step.

@@ -1,9 +1,18 @@
 import type { Interval } from "@/config/product";
 import { planById } from "@/config/product";
 
-/** Same-origin paths only. Anything else (absolute URLs, //host, backslashes) falls back. */
+/**
+ * Same-origin paths only. Anything else (absolute URLs, //host, backslashes) falls back. Control characters are refused
+ * too: the URL parser drops tab/CR/LF, so `/\t/evil.com` (sent as `?next=/%09/evil.com`) becomes `//evil.com` in the
+ * browser. The final check resolves the path the way a browser would and keeps it only if the origin is unchanged.
+ */
 export function safeNext(next: string | null | undefined, fallback = "/app"): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.includes("\\")) return fallback;
+  if (!next || next.length > 2048 || !next.startsWith("/") || next.startsWith("//") || next.includes("\\") || /[\u0000-\u001f\u007f]/.test(next)) return fallback;
+  try {
+    if (new URL(next, "https://self.invalid").origin !== "https://self.invalid") return fallback;
+  } catch {
+    return fallback;
+  }
   return next;
 }
 

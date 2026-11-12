@@ -19,6 +19,8 @@ const schema = z.object({
   ALTCHA_HMAC_KEY: z.string().optional(),
   APP_FLAGS: z.string().optional(),
   ADMIN_EMAILS: z.string().optional(),
+  /** Self-host: comma-separated proxy IPs/CIDRs in front of the app, so sign-in rate limits key on the real client IP. */
+  TRUSTED_PROXIES: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
 });

@@ -60,7 +60,12 @@ export function createAuth(db: BetterAuthOptions["database"]) {
     secret: e.BETTER_AUTH_SECRET ?? (isProd() ? undefined : "dev-only-secret-dev-only-secret-0000"),
     database: db,
     trustedOrigins: [base, ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []), ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : [])],
-    advanced: cookieConfig(secure),
+    advanced: {
+      ...cookieConfig(secure),
+      // Vercel sends one X-Forwarded-For value (the client). Behind your own proxy, list it so the chain is walked from
+      // the right; otherwise a client-supplied header could pick its own rate-limit bucket.
+      ...(e.TRUSTED_PROXIES ? { ipAddress: { trustedProxies: e.TRUSTED_PROXIES.split(",").map((s) => s.trim()).filter(Boolean) } } : {}),
+    },
     session: {
       expiresIn: 60 * 60 * 24 * 30,
       updateAge: 60 * 60 * 24,

@@ -9,6 +9,7 @@ const MESSAGES: Record<string, string> = {
   no_customer: "There is no billing profile for this organization yet. Choose a plan first.",
   plan_required: "This needs a higher plan.",
   mailbox_limit: "Your plan's mailbox limit is reached. Upgrade in Billing or remove a mailbox.",
+  environment_limit: "Your plan has no room for another environment. Upgrade in Billing to add one.",
   endpoint_disabled: "The endpoint is disabled. Turn it on in Webhooks, then replay.",
   rate_limited: "Too many attempts. Wait a minute and try again.",
   invalid_url: "Enter a full URL starting with https://.",

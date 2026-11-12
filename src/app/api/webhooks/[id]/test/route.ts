@@ -4,6 +4,7 @@ import { HttpError, json, withApi } from "@/lib/http";
 import { DELIVERY_TTL_DAYS } from "@/lib/db/types";
 import { uuidv7 } from "@/lib/ids";
 import { attemptDelivery } from "@/lib/webhooks/outbound";
+import { enforceRateLimit } from "@/lib/security/ratelimit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,6 +14,8 @@ export const POST = withApi<{ params: Promise<{ id: string }> }>(async (_req, { 
   requirePermission(ctx, "webhook", "manage");
   const { id } = await params;
   const db = await getDb();
+  // Each test sends a real request from our servers to a URL the customer chose: cap it so it is not a free request cannon.
+  await enforceRateLimit(`webhook-test:${ctx.org.id}`, { limit: 10, windowMs: 60_000 }, db);
   const ep = await db.getWebhookEndpoint(ctx.org.id, id);
   if (!ep) throw new HttpError(404, "not_found");
   const now = new Date();
