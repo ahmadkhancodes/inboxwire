@@ -14,7 +14,7 @@ export function FinalCta({ title, body, cta, note }: { title: ReactNode; body?: 
         </div>
         <div className="flex flex-col items-start gap-3 lg:col-span-4">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <SessionCta href={cta.href} label={cta.label} size="lg" variant="mark" />
+            <SessionCta href={cta.href} label={cta.label} size="md" variant="mark" />
             <Link href="/docs" className="inline-flex min-h-11 items-center button-md underline decoration-2 underline-offset-4 focus-visible:outline-text-inverse">Read the docs</Link>
           </div>
           {note ? <p className="caption-2 text-text-inverse/80">{note}</p> : null}

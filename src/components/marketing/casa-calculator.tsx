@@ -19,7 +19,7 @@ export function CasaCalculator() {
   const result = assessCasa(answers);
   return (
     <div className="grid gap-8 lg:grid-cols-12 lg:gap-16">
-      <form className="flex flex-col lg:col-span-6" onSubmit={(e) => e.preventDefault()} aria-label="CASA self-assessment">
+      <form className="flex flex-col lg:col-span-6" onSubmit={(e) => e.preventDefault()} aria-label="Check which CASA path applies to you">
         <fieldset className="flex flex-col">
           <legend className="heading-6 mb-4 text-text">Which of these are true?</legend>
           {QUESTIONS.map((q) => (

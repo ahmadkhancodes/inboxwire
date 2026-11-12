@@ -130,7 +130,7 @@ describe("price claims in public copy match the code", () => {
     const selfhostYear = planById("selfhost")!.prices.find((p) => p.interval === "year")!.usd / 100;
     const starterMonth = planById("starter")!.prices.find((p) => p.interval === "month")!.usd / 100;
     expect(home).toContain(`Developer tier is free for ${planById("free")!.limits.mailboxes} mailboxes`);
-    expect(home).toContain(`self-host is $${selfhostYear} a year`);
+    expect(home).toContain(`running it on your servers is $${selfhostYear} a year`);
     expect(home).toContain(`Cloud extras are $${(product.extraMailbox.usd / 100).toFixed(2)} each`);
     expect(product.description).toContain(`$${selfhostYear} a year`);
     expect(product.description).toContain(`$${starterMonth} a month`);
