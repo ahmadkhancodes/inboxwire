@@ -28,8 +28,7 @@ test("signed out: every public page loads clean, links resolve, app routes redir
     await page.waitForLoadState("networkidle");
     expect(page.url(), p).toContain("/sign-in");
   }
-  // Known, open: a cold production server sometimes logs React #418 on the first /sign-in hydration (not reproducible in dev). See docs/QA-REPORT.md.
-  expect(problems.filter((p) => !/Minified React error #418/.test(p))).toEqual([]);
+  expect(problems).toEqual([]); // the old React #418 tolerance is gone with dark mode (tests/e2e/qa2/cold.spec.ts)
 });
 
 test("sign-in: invalid input, reused and garbage magic links", async ({ page }) => {

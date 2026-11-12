@@ -83,3 +83,4 @@ Tooling notes: no `rsync` in the container (use tar); Vercel MCP connector is th
 
 ## 12 Nov 2026 (m9): handy + hardening, partial, not deployed
 - Health probe with states, deliveries CSV export, provider error codes, HMAC deletion digest, stronger log scrubbing, confirm dialog busy guard, doc fixes; REVIEW P2s closed (P1-7 and DNS pinning left, reasons in REVIEW.md). Left: onboarding checklist/import/shortcuts, browser CSP audit, full Playwright rerun, run `npm run db:indexes` is unchanged.
+- 2026-11-12: Post-redesign regression QA (tests/e2e/qa2/*, docs/QA-REPORT.md). Fixed: checkout-canceled return showed nothing; signed-out background prefetch redirects broke on http (proxy now keys on Sec-Fetch-Dest, Next 16 strips the old headers); e-mail/OG/icon off the carbon ramp; global-error without fonts; removed the React #418 tolerances (gone with dark mode). Public + app screens at 375/1440 scanned for fonts, contrast, clipping, dark leftovers: clean. Not deployed.

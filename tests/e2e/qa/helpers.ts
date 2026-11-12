@@ -22,11 +22,11 @@ export function watch(page: Page, opts: { allowStatus?: number[] } = {}) {
 }
 
 /** Sign in through the real form and the e-mail outbox. */
-export async function uiSignIn(page: Page, email: string, callback = "/app") {
+export async function uiSignIn(page: Page, email: string, callback = "/app", param = "callbackURL") {
   // Better Auth throttles magic links per IP (5/min); give each simulated visitor their own address
   const n = () => Math.floor(Math.random() * 250);
   await page.context().setExtraHTTPHeaders({ "x-forwarded-for": `10.${n()}.${n()}.${n()}` });
-  await page.goto(`/sign-in?callbackURL=${encodeURIComponent(callback)}`);
+  await page.goto(`/sign-in?${param}=${encodeURIComponent(callback)}`);
   await page.waitForLoadState("networkidle");
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Email me a sign-in link" }).click();

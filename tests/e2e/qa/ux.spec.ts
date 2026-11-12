@@ -95,7 +95,7 @@ test("light only: marketing and sign-in render light with color-scheme light, no
     expect((r + g + b) / 3, `${p} background should be light`).toBeGreaterThan(200);
     await expect(page.getByRole("button", { name: /theme/i })).toHaveCount(0);
   }
-  expect(problems.filter((p) => !/#418/.test(p))).toEqual([]);
+  expect(problems).toEqual([]);
 });
 
 test("expired or mangled session cookie sends the user to sign-in, not an error page", async ({ page }) => {
