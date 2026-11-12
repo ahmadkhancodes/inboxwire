@@ -172,7 +172,7 @@ export function BillingClient(p: Props) {
                 aria-pressed={interval === i}
                 onClick={() => setInterval(i)}
                 className={cn(
-                  "button-sm min-h-8 rounded-sm px-3 py-1 transition-colors duration-300 focus-visible:focus-ring",
+                  "button-sm min-h-11 rounded-sm px-3 py-1 transition-colors sm:min-h-8 duration-300 focus-visible:focus-ring",
                   interval === i ? "bg-action text-action-text" : "text-text-subtle hover:text-text",
                 )}
               >

@@ -96,7 +96,7 @@ export function createAuth(db: BetterAuthOptions["database"]) {
           await sendMailSafe({ to: email, ...m, category: "transactional" });
         },
       }),
-      twoFactor({ issuer: product.name, skipVerificationOnEnable: false }),
+      twoFactor({ issuer: product.name, skipVerificationOnEnable: false, allowPasswordless: true }),
       passkey({ rpName: product.fullName, rpID: new URL(base).hostname, origin: base }),
       organization({
         ac,
@@ -115,6 +115,7 @@ export function createAuth(db: BetterAuthOptions["database"]) {
         defaultPrefix: `${product.slug.slice(0, 4)}_`,
         enableMetadata: true,
         requireName: true,
+        maximumNameLength: 60, // matches the 60 character cap on the dashboard field (the plugin default is 32)
         rateLimit: { enabled: true, timeWindow: 60_000, maxRequests: 600 },
       }),
       nextCookies(),

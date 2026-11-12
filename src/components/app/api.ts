@@ -75,14 +75,7 @@ export function useAsync<T>(load: () => Promise<T>, deps: readonly unknown[] = [
   return { ...state, reload };
 }
 
-export function formatDate(d: string | number | Date | null | undefined, withTime = false): string {
-  if (!d) return "Never";
-  const date = new Date(d);
-  if (Number.isNaN(date.getTime())) return "Unknown";
-  return new Intl.DateTimeFormat("en", withTime
-    ? { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }
-    : { dateStyle: "medium", timeZone: "UTC" }).format(date) + (withTime ? " UTC" : "");
-}
+export { formatDate } from "./format-date";
 
 /** Full-page navigation (new session or org means server layouts must re-render from scratch). */
 export function hardNavigate(path: string) {

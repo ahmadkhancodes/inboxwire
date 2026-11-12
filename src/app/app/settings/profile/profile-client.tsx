@@ -57,7 +57,7 @@ export function ProfileClient({ name: initial, email, verified }: { name: string
             <Badge tone={verified ? "success" : "warning"}>{verified ? "Email verified" : "Email not verified"}</Badge>
           </div>
           <div className="flex items-center gap-4">
-            <Button type="submit" loading={busy} disabled={name.trim() === saved}>Save changes</Button>
+            <Button type="submit" loading={busy} disabled={name.trim() === saved} title={name.trim() === saved ? "No changes to save" : undefined}>Save changes</Button>
             {msg?.ok ? <p role="status" className="caption-2 text-success">{msg.text}</p> : null}
           </div>
         </form>

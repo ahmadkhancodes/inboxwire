@@ -256,7 +256,7 @@ function Sessions({ currentSessionId }: { currentSessionId: string }) {
     <Panel
       title="Active sessions"
       description="Devices currently signed in to your account."
-      actions={<Button variant="secondary" size="sm" onClick={revokeOthers} loading={busy === "others"} disabled={others === 0}>Sign out other sessions</Button>}
+      actions={<Button variant="secondary" size="sm" onClick={revokeOthers} loading={busy === "others"} disabled={others === 0} title={others === 0 ? "This is the only device signed in" : undefined}>Sign out other sessions</Button>}
     >
       <div className="flex flex-col gap-4">
         {msg ? <p role={msg.ok ? "status" : "alert"} className={msg.ok ? "caption-2 text-success" : "caption-2 text-danger"}>{msg.text}</p> : null}

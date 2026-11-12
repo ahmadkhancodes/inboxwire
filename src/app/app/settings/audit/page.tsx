@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { DataTable, Td } from "@/components/app/data-table";
-import { formatDate } from "@/components/app/api";
+import { formatDate } from "@/components/app/format-date";
 import { PageHeader } from "@/components/app/page-header";
 import { buttonClass } from "@/components/ui/button";
 import { EmptyState, Notice } from "@/components/ui/states";

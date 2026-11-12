@@ -3,7 +3,10 @@ import { log } from "@/lib/logger";
 import type { MailMessage, MailTransport, SendResult } from "./types";
 
 /** Dev/test/stub transport: keeps messages in memory and logs the subject (never the body). */
-export const outbox: (MailMessage & { from: string; id: string; at: Date })[] = [];
+type Sent = MailMessage & { from: string; id: string; at: Date };
+// On globalThis: Next bundles route handlers separately, so a module-level array can be a different copy per route.
+const g = globalThis as { __inboxwireOutbox?: Sent[] };
+export const outbox: Sent[] = (g.__inboxwireOutbox ??= []);
 
 export function consoleTransport(): MailTransport {
   return {
