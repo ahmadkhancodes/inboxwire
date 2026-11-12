@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ButtonLink } from "@/components/ui/button";
+import { SessionCta } from "./session-cta";
 import { Section } from "@/components/ui/layout";
 
 /** Closing block on the ink band: the same action as the hero, plus the docs beside it. */
@@ -14,7 +14,7 @@ export function FinalCta({ title, body, cta, note }: { title: ReactNode; body?: 
         </div>
         <div className="flex flex-col items-start gap-3 lg:col-span-4">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <ButtonLink href={cta.href} size="lg" variant="mark">{cta.label}</ButtonLink>
+            <SessionCta href={cta.href} label={cta.label} size="lg" variant="mark" />
             <Link href="/docs" className="inline-flex min-h-11 items-center button-md underline decoration-2 underline-offset-4 focus-visible:outline-text-inverse">Read the docs</Link>
           </div>
           {note ? <p className="caption-2 text-text-inverse/80">{note}</p> : null}

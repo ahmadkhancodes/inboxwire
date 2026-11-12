@@ -1,6 +1,6 @@
+import { SessionCta } from "@/components/marketing/session-cta";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ButtonLink } from "@/components/ui/button";
 import { Section } from "@/components/ui/layout";
 import { CompareTable } from "@/components/marketing/compare-table";
 import { Faq } from "@/components/marketing/faq";
@@ -39,7 +39,7 @@ export default async function ComparePage({ params }: Props) {
         <div className="flex max-w-2xl flex-col items-start gap-6">
           <h1 id="compare-title" className="hero-gradient-text heading-3 md:heading-1">{entry.headline}</h1>
           <p className="body-3 text-text-subtle md:title-1">{entry.intro}</p>
-          <ButtonLink href="/sign-in" size="lg">Start free</ButtonLink>
+          <SessionCta href="/sign-in" label="Start free" size="lg" />
         </div>
         <div className="mt-12 md:mt-16">
           <CompareTable
