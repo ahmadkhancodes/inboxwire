@@ -12,7 +12,7 @@ Done when: connecting your Gmail from the hosted connect page returns a `message
 ## B. Microsoft Entra app registration
 1. https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade/isMSAApp~/false : name `Inboxwire by BufferSol (dev)`, supported accounts: Multitenant + personal.
 2. Redirect URI (Web): `https://inboxwire.buffersoltech.com/api/connect/callback/microsoft`.
-3. API permissions (delegated, Microsoft Graph): `Mail.ReadWrite`, `Mail.Send`, `offline_access`, `openid`, `email`, `User.Read`. Certificates & secrets: new client secret. Paste back: Application (client) ID and secret to Vercel env `MS_CLIENT_ID`/`MS_CLIENT_SECRET`.
+3. API permissions (delegated, Microsoft Graph): `Mail.ReadWrite`, `Mail.Send`, `offline_access`, `openid`, `email`, `User.Read`. Certificates & secrets: new client secret. Microsoft is bring-your-own per environment: paste the Application (client) ID and secret in Settings, OAuth clients (no env var is read).
 Done when: Outlook.com mailbox connects and Graph notification hits `/api/hooks/graph/<envId>`.
 
 ## C. Accounts and keys (already tracked by orchestrator)

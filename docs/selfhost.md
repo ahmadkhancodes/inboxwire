@@ -52,7 +52,7 @@ The container entrypoint runs the same check on every start and logs the result.
 - **Backups:** the `mongo-data` volume, or `docker compose exec -T mongo mongodump --archive > backup.archive`.
 - **Update:** set `INBOXWIRE_VERSION` to a release tag without the `v`, then `docker compose pull && docker compose up -d`. The worker creates the MongoDB indexes (the `ensure-indexes` job) each time it starts, so an update needs no manual step.
 - **Delete a mailbox:** `DELETE /v1/accounts/{id}` revokes the Google token and writes a `deletion_record`.
-- **Scaling:** the app is stateless. Run several `app` replicas behind the proxy and one `worker`.
+- **Scaling:** the app is stateless. Run one `app` and one `worker` today; several `app` replicas behind a proxy work for the web and API, but horizontal scaling is not load-tested yet (the compare page says the same).
 
 ## Limits of the self-host build today
 - IMAP changes are detected by polling (about 60 s), not IDLE. An IDLE worker is planned for always-on hosts.

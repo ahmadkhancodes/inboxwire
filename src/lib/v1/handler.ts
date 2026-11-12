@@ -24,9 +24,18 @@ export async function loadAccount(db: Db, env: Environment, id: string): Promise
   return a;
 }
 
+/** Maps a provider's error text to a stable code. The text itself is never returned (it can carry hostnames or tokens). */
+export function providerReason(msg: string): string {
+  if (/auth|invalid_grant|unauthori[sz]ed|401|403|login|credentials|forbidden/i.test(msg)) return "authentication";
+  if (/rate|quota|429|too many|throttl/i.test(msg)) return "rate_limited";
+  if (/timed? ?out|etimedout|abort/i.test(msg)) return "timeout";
+  if (/econn|enotfound|eai_again|connect|socket|network|tls|ssl|5\d\d/i.test(msg)) return "connection";
+  return "unknown";
+}
+
 /** Runs `fn` with the account's backend and always closes it. Provider failures become 502 `provider_error`, not 500. */
 export async function withBackend<T>(db: Db, account: MailAccount, fn: (b: MailBackend) => Promise<T>, deps: BackendDeps = {}): Promise<T> {
-  const backend = await backendFor(db, account, deps).catch((e: Error) => { throw new HttpError(409, "account_unavailable", { reason: e.message }); });
+  const backend = await backendFor(db, account, deps).catch((e: Error) => { throw new HttpError(409, "account_unavailable", { reason: providerReason(e.message) }); });
   try {
     return await fn(backend);
   } catch (e) {
@@ -34,7 +43,7 @@ export async function withBackend<T>(db: Db, account: MailAccount, fn: (b: MailB
     const msg = (e as Error).message ?? "";
     if (/not_found|404/i.test(msg)) throw new HttpError(404, "not_found");
     if (/invalid_cursor/.test(msg)) throw new HttpError(400, "invalid_cursor");
-    throw new HttpError(502, "provider_error", { reason: msg.slice(0, 200) });
+    throw new HttpError(502, "provider_error", { reason: providerReason(msg) });
   } finally {
     await backend.close().catch(() => {});
   }

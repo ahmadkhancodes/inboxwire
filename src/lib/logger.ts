@@ -2,11 +2,22 @@
 type Level = "debug" | "info" | "warn" | "error";
 type Fields = { code?: string; route?: string; userId?: string; orgId?: string; [k: string]: unknown };
 
-const SECRETISH = /(token|secret|password|authorization|cookie|email|code)$/i;
+const SECRETISH = /(token|secret|password|passwd|authorization|cookie|email|mail|bearer|api[-_]?key|signature|dsn|credential)|^code$/i;
+const EMAILISH = /[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+/g;
 
-export function scrub(fields: Fields): Fields {
+function scrubValue(v: unknown, depth: number): unknown {
+  if (typeof v === "string") return v.replace(EMAILISH, "[email]").slice(0, 500);
+  if (v && typeof v === "object" && depth < 4) {
+    if (Array.isArray(v)) return v.slice(0, 20).map((x) => scrubValue(x, depth + 1));
+    return scrub(v as Fields, depth + 1);
+  }
+  return v;
+}
+
+/** Redacts secret-looking keys (anywhere in the name, nested too) and e-mail addresses inside string values. `code` is an error code, kept. */
+export function scrub(fields: Fields, depth = 0): Fields {
   const out: Fields = {};
-  for (const [k, v] of Object.entries(fields)) out[k] = SECRETISH.test(k) && k !== "code" ? "[redacted]" : v;
+  for (const [k, v] of Object.entries(fields)) out[k] = SECRETISH.test(k) && k !== "code" ? "[redacted]" : scrubValue(v, depth);
   return out;
 }
 
