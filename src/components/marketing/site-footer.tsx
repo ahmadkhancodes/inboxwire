@@ -34,7 +34,7 @@ export function SiteFooter() {
       <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 md:py-16 lg:px-8">
         <div className="grid gap-12 md:grid-cols-12">
           <div className="flex max-w-xs flex-col gap-3 md:col-span-5">
-            <Link href="/" className="title-2 w-fit rounded-sm text-text focus-visible:focus-ring" aria-label={`${product.fullName} home`}><Wordmark /></Link>
+            <Link href="/" className="inline-flex min-h-11 w-fit items-center rounded-sm title-2 text-text focus-visible:focus-ring" aria-label={`${product.fullName} home`}><Wordmark /></Link>
             <p className="body-6 text-text-subtle">{product.tagline}.</p>
           </div>
           <div className="grid grid-cols-2 gap-8 md:col-span-7 md:grid-cols-3">

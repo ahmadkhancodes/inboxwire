@@ -82,7 +82,7 @@ function ProviderPanel({ provider, data, canManage, reload, environment }: { pro
               </>
             ) : null}
             {msg ? <Notice tone={msg.ok ? "success" : "danger"}>{msg.text}</Notice> : null}
-            <div><Button type="submit" loading={busy} disabled={!canManage || !clientId || !secret}>Save credentials</Button></div>
+            <div><Button type="submit" loading={busy} disabled={!canManage || !clientId || !secret} title={!canManage ? "Only owners and admins can change this" : !clientId || !secret ? "Enter the client ID and secret first" : undefined}>Save credentials</Button></div>
             {!canManage ? <p className="caption-2 text-text-subtle">Only admins and owners can change OAuth clients.</p> : null}
           </form>
         </li>
