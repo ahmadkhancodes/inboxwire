@@ -20,13 +20,33 @@ export function json(body: unknown, status = 200, headers: Record<string, string
 
 export const MAX_BODY = 1_000_000; // jotflow improvement (3)
 
+/**
+ * The request body as text, read as a stream and cut off at `max` bytes (413). `req.text()` buffers everything first, so a
+ * chunked upload without Content-Length could fill memory on a self-hosted server (Vercel caps bodies, Node does not).
+ */
+export async function readBodyText(req: Request, max = MAX_BODY): Promise<string> {
+  if (Number(req.headers.get("content-length") ?? 0) > max) throw new HttpError(413, "body_too_large");
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel().catch(() => {});
+      throw new HttpError(413, "body_too_large");
+    }
+    chunks.push(value);
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
 export async function readJson<T>(req: Request, schema?: z.ZodType<T>): Promise<T> {
-  const len = Number(req.headers.get("content-length") ?? 0);
-  if (len > MAX_BODY) throw new HttpError(413, "body_too_large");
   let data: unknown;
   try {
-    const text = await req.text();
-    if (text.length > MAX_BODY) throw new HttpError(413, "body_too_large");
+    const text = await readBodyText(req);
     data = text ? JSON.parse(text) : {};
   } catch (e) {
     if (e instanceof HttpError) throw e;
@@ -78,7 +98,12 @@ export function withApi<C = unknown>(handler: Handler<C>, opts: { csrf?: boolean
   };
 }
 
-/** Client IP from Vercel/proxy headers. */
+/**
+ * Client IP for rate limits and audit. Vercel sets X-Forwarded-For to the single client address. Behind any other proxy
+ * the LEFTMOST entry is whatever the client sent (spoofable: one attacker becomes many IPs), so we take the entry the
+ * nearest proxy appended (the rightmost). Self-hosters must run behind a proxy that sets the header (docs/selfhost.md).
+ */
 export function clientIp(req: Request): string {
-  return (req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip") || "0.0.0.0").slice(0, 64);
+  const xff = req.headers.get("x-forwarded-for")?.split(",").map((s) => s.trim()).filter(Boolean);
+  return (xff?.at(-1) || req.headers.get("x-real-ip") || "0.0.0.0").slice(0, 64);
 }

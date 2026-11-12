@@ -17,12 +17,20 @@ export async function authEnv(req: Request, need: Scope, db?: Db) {
   if (!NAMES.includes(name)) throw new HttpError(400, "invalid_environment");
   // A key bound to an environment cannot reach another one (a leaked development key never touches production).
   if (environment && environment !== name) throw new HttpError(403, "environment_not_allowed", { keyEnvironment: environment === "none" ? null : environment });
-  // Plans sell 1, 3 or unlimited environments: a plan at its limit cannot create another one (existing ones stay reachable).
+  const env = await environmentWithinPlan(d, orgId, name);
+  return { orgId, keyId, scopes, env, db: d };
+}
+
+/**
+ * The org's environment `name`, created only if the plan has room. Plans sell 1, 3 or unlimited environments: a plan at
+ * its limit cannot create another one (existing ones stay reachable). Every path that can create an environment (API
+ * keys, dashboard OAuth-client screens) must come through here, or a Free org gets three environments for nothing.
+ */
+export async function environmentWithinPlan(d: Db, orgId: string, name: EnvName) {
   const have = await d.listEnvironments(orgId);
   if (!have.some((e) => e.name === name)) {
     const limit = effectivePlan(await d.getEntitlement(orgId), Date.now()).limits.environments;
     if (have.length >= limit) throw new HttpError(402, "environment_limit", { limit, used: have.length });
   }
-  const env = await d.ensureEnvironment(orgId, name);
-  return { orgId, keyId, scopes, env, db: d };
+  return d.ensureEnvironment(orgId, name);
 }

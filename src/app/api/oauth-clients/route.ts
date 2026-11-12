@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { audit } from "@/lib/audit";
 import { requireOrg, requirePermission } from "@/lib/auth/session";
+import { environmentWithinPlan } from "@/lib/connect/env";
 import { validateClientCredentials } from "@/lib/connect/oauth";
 import { validatePubsub, wizardInfo } from "@/lib/connect/wizard";
 import { getDb } from "@/lib/db";
@@ -34,7 +35,7 @@ export const GET = withApi(async (req) => {
   const ctx = await requireOrg();
   requirePermission(ctx, "apiKey", "read");
   const db = await getDb();
-  const env = await db.ensureEnvironment(ctx.org.id, envFrom(req));
+  const env = await environmentWithinPlan(db, ctx.org.id, envFrom(req));
   const clients = (await db.listOAuthClients(env.id)).map(({ clientSecretEnc: _s, ...c }) => ({ ...c, hasSecret: true }));
   return json({ environmentId: env.id, clients, info: wizardInfo(appUrl(), env.id) });
 });
@@ -46,7 +47,7 @@ export const PUT = withApi(async (req) => {
   const bad = validateClientCredentials(b.provider, b.clientId.trim(), b.clientSecret.trim()) ?? (b.provider === "google" ? validatePubsub(b.pubsubTopic || null, b.pubsubServiceAccount || null) : null);
   if (bad) throw new HttpError(400, "invalid_input", [{ path: "clientId", message: bad }]);
   const db = await getDb();
-  const env = await db.ensureEnvironment(ctx.org.id, b.environment ?? "production");
+  const env = await environmentWithinPlan(db, ctx.org.id, b.environment ?? "production");
   const c = await db.upsertOAuthClient({
     id: uuidv7(), envId: env.id, provider: b.provider, clientId: b.clientId.trim(), mode: "byo",
     clientSecretEnc: await sealForOrg(db, ctx.org.id, b.clientSecret.trim()),
@@ -63,7 +64,7 @@ export const DELETE = withApi(async (req) => {
   const provider = new URL(req.url).searchParams.get("provider");
   if (provider !== "google" && provider !== "microsoft") throw new HttpError(400, "invalid_input");
   const db = await getDb();
-  const env = await db.ensureEnvironment(ctx.org.id, envFrom(req));
+  const env = await environmentWithinPlan(db, ctx.org.id, envFrom(req));
   await db.deleteOAuthClient(env.id, provider);
   await audit({ orgId: ctx.org.id, actorId: ctx.user.id, action: "oauth_client.deleted", target: provider });
   return json({ ok: true });

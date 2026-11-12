@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { api, formatDate, useAsync } from "@/components/app/api";
 import { CopyButton } from "@/components/app/copy-button";
 import { Panel } from "@/components/app/page-header";
@@ -110,10 +111,11 @@ export function OAuthClientsClient({ canManage }: { canManage: boolean }) {
 function Inner({ environment, canManage }: { environment: string; canManage: boolean }) {
   const state = useAsync(async () => {
     const r = await api<Data>(`/api/oauth-clients?environment=${environment}`);
-    if (!r.ok) throw new Error(r.message);
+    if (!r.ok) throw new Error(r.code === "environment_limit" ? r.message : "load_failed");
     return r.data;
   });
   if (state.loading) return <Skeleton className="h-64 w-full" />;
+  if (state.error && state.error !== "load_failed") return <Notice title={`No ${environment} environment on this plan`} action={<Link href="/app/billing" className="body-6 underline underline-offset-4 focus-visible:focus-ring">See plans</Link>}>{state.error}</Notice>;
   if (state.error || !state.data) return <ErrorState title="Could not load OAuth clients" body="Reload the page. If it keeps failing, check the status page." />;
   return (
     <div className="flex flex-col gap-6">

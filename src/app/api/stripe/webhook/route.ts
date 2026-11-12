@@ -4,20 +4,22 @@ import { getStripe } from "@/lib/billing/stripe";
 import { getDb } from "@/lib/db";
 import { issueSelfhostLicence } from "@/lib/licences";
 import { env } from "@/lib/env";
-import { json } from "@/lib/http";
+import { json, readBodyText } from "@/lib/http";
 import { log } from "@/lib/logger";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Stripe webhook: signature on the RAW body (req.text(), never req.json()). Exempt from CSRF (signed). */
+/** Stripe webhook: signature on the RAW body (readBodyText, never req.json()). Exempt from CSRF (signed). */
 export async function POST(req: Request) {
   const stripe = getStripe();
   const secret = env().STRIPE_WEBHOOK_SECRET;
   if (!stripe || !secret) return json({ error: "billing_unavailable" }, 503);
+  const raw = await readBodyText(req).catch(() => null); // raw bytes, capped at 1 MB
+  if (raw === null) return json({ error: "body_too_large" }, 413);
   try {
     const db = await getDb();
-    return await handleStripeWebhook(await req.text(), req.headers.get("stripe-signature"), {
+    return await handleStripeWebhook(raw, req.headers.get("stripe-signature"), {
       stripe,
       db,
       secret,
