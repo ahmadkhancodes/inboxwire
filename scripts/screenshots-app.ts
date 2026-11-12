@@ -1,5 +1,5 @@
 /**
- * Playwright screenshots of the signed-in dashboard at 375 and 1440, light and dark -> docs/qa/<date>-m4/.
+ * Playwright screenshots of the signed-in dashboard at 375 and 1440, light -> docs/qa/<date>-m4/.
  * Needs a server started with E2E_OUTBOX=1 and DB_DRIVER=memory (it seeds demo data through /api/dev/seed):
  *   E2E_OUTBOX=1 DB_DRIVER=memory NEXT_PUBLIC_APP_URL=http://localhost:3100 npx next start -p 3100
  *   BASE_URL=http://localhost:3100 CHROME_PATH=/usr/bin/google-chrome npx tsx scripts/screenshots-app.ts
@@ -15,10 +15,10 @@ async function main() {
   const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {});
   const problems: string[] = [];
   const origin = { origin: BASE };
-  for (const theme of ["light", "dark"] as const) {
+  {
+    const theme = "light" as const;
     for (const width of [375, 1440]) {
       const ctx = await browser.newContext({ viewport: { width, height: width < 800 ? 812 : 900 }, colorScheme: theme, baseURL: BASE });
-      await ctx.addInitScript((t) => { try { localStorage.setItem("theme", t); } catch {} }, theme);
       const page = await ctx.newPage();
       const email = `shots+${Date.now()}${width}${theme}@studio.test`;
       await page.request.post("/api/auth/sign-in/magic-link", { data: { email, callbackURL: "/app" }, headers: origin });

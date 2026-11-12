@@ -3,7 +3,7 @@
 Standing decisions are in docs/factory/BATCH1_PLAN.md (Mongo instead of Postgres, Better Auth, Stripe first, Mailer interface, Vercel-first, keep 3 deployments).
 
 ## 5 Nov 2026 (Phase 0)
-- Design: brief's switchboard direction adopted as-is (docs/DESIGN.md); dark palette is a deliberate override of the playbook's dark whitelist.
+- Design: brief's switchboard direction adopted as-is (docs/DESIGN.md). Dark mode removed entirely (12 Nov 2026, founder decision): light only, one token set, `color-scheme: light`, no toggle.
 - IMAP is cron-polled (1 min) on Vercel; IDLE moves behind `IdleWatcher` on the VPS.
 - Gmail push uses a Pub/Sub push subscription (OIDC-verified) to a Vercel route instead of a pull worker.
 - CI/registry: GitHub Actions + GHCR instead of Forgejo/Woodpecker until a VPS exists.

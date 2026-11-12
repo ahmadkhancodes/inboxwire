@@ -3,7 +3,7 @@ import { uiSignIn, watch } from "./helpers";
 
 const APP = ["/app", "/app/lines", "/app/deliveries", "/app/outbox", "/app/ticker", "/app/keys", "/app/billing", "/app/oauth-clients",
   "/app/settings/members", "/app/settings/webhooks", "/app/settings/oauth-clients", "/app/settings/security", "/app/settings/api-keys", "/app/settings/profile", "/app/settings/audit"];
-const SKIP = /sign out|log out|delete|remove|revoke|disable|leave|theme|passkey|download|export/i;
+const SKIP = /sign out|log out|delete|remove|revoke|disable|leave|passkey|download|export/i;
 
 async function login(page: Page) {
   await page.goto(await uiSignIn(page, `clicks+${Date.now()}@studio.test`));

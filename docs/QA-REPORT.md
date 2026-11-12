@@ -10,7 +10,7 @@ Method: production build (`next start`, `DB_DRIVER=memory`, `E2E_OUTBOX=1`, cons
 - **API keys, webhooks, members, profile** (`forms.spec.ts`): empty, long, HTML, unicode, duplicate and double-submit input; secrets shown once; delete asks first and Escape cancels.
 - **Connect links**: API create, garbage/long/script tokens on `/connect/<token>` show a page, never a 500.
 - **Isolation and scopes**: a second organisation cannot read, list or delete another org's lines through the API or the dashboard; a read-scope key cannot send or delete; unauthenticated API is 401; a mangled session cookie redirects to sign-in.
-- **UX** (`ux.spec.ts`): home next steps, plan limits agree with pricing, keyboard-only sign-in with visible focus, theme toggle persists, 44px tap targets at 375px, dark theme, billing without Stripe keys explains itself.
+- **UX** (`ux.spec.ts`): home next steps, plan limits agree with pricing, keyboard-only sign-in with visible focus, 44px tap targets at 375px, light-only check, billing without Stripe keys explains itself.
 
 ## Defects found and fixed
 | What the user would have seen | Fix | Regression test |

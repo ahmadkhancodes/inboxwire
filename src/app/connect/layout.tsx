@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { ThemeToggle } from "@/components/theme";
 import { product } from "@/config/product";
 
 export const metadata = { title: `Connect a mailbox | ${product.fullName}`, robots: { index: false, follow: false } };
@@ -9,7 +8,6 @@ export default function ConnectLayout({ children }: { children: ReactNode }) {
     <div className="flex min-h-dvh flex-col bg-surface">
       <header className="flex items-center justify-between px-4 py-4 sm:px-6 lg:px-10">
         <span className="heading-6 text-text">{product.fullName}</span>
-        <ThemeToggle />
       </header>
       <main id="main" className="flex flex-1 flex-col items-center justify-center px-4 py-12 sm:px-6">
         <div className="flex w-full max-w-md flex-col gap-8">{children}</div>

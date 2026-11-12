@@ -38,7 +38,7 @@ export function LinesTicker() {
   return (
     <figure className="m-0">
       <figcaption className="sr-only">Example of the Inboxwire by BufferSol Lines table with a status lamp per mailbox and the webhook ticker below it</figcaption>
-      <div className="overflow-hidden rounded-lg border border-border bg-surface-raised shadow-[0_1px_0_rgba(22,25,28,.06),0_1px_3px_rgba(22,25,28,.08)] dark:shadow-none">
+      <div className="overflow-hidden rounded-lg border border-border bg-surface-raised shadow-[0_1px_0_rgba(22,25,28,.06),0_1px_3px_rgba(22,25,28,.08)]">
         <div className="flex items-center justify-between gap-4 border-b border-border bg-surface-sunken px-4 py-2 font-mono caption-4 text-text-subtle">
           <span>Lines · northwind-crm / production</span>
           <span>4 of 4 watched</span>
