@@ -5,18 +5,22 @@ import { effectivePlan, limitFor } from "./entitlement";
 // Metering hooks (MAU, mailboxes, devices, submissions...). Period = calendar month UTC.
 export const periodOf = (d = new Date()) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 
+export type UsageLevel = "ok" | "near" | "at" | "over";
+
 export interface UsageState {
   meter: MeterId;
   used: number;
   limit: number;
   ratio: number;
-  /** "ok" < 80%, "near" 80-99%, "over" >= 100% */
-  level: "ok" | "near" | "over";
+  /** "ok" < 80%, "near" 80-99%, "at" exactly the limit (used === limit), "over" strictly above it */
+  level: UsageLevel;
 }
 
 export function usageState(meter: MeterId, used: number, limit: number): UsageState {
   const ratio = limit <= 0 ? (used > 0 ? 1 : 0) : used / limit;
-  return { meter, used, limit, ratio, level: ratio >= 1 ? "over" : ratio >= 0.8 ? "near" : "ok" };
+  // Exact integer comparisons: using all of a limit is "at", never "over".
+  const level: UsageLevel = used > limit ? "over" : limit > 0 && used === limit ? "at" : ratio >= 0.8 ? "near" : "ok";
+  return { meter, used, limit, ratio, level };
 }
 
 /** Count one unit and report whether it is within the plan (soft cap: caller decides to hold, never drop). */

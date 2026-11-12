@@ -1,7 +1,7 @@
 import type { UsageState } from "@/lib/billing/usage";
 import { METER_LABELS, fmt } from "./labels";
 
-const bar = { ok: "bg-action", near: "bg-warning", over: "bg-danger" } as const;
+const bar = { ok: "bg-action", near: "bg-warning", at: "bg-action", over: "bg-danger" } as const;
 
 /** Usage bar. Width is a transform (scaleX), never an animated width. */
 export function Meter({ state }: { state: UsageState }) {

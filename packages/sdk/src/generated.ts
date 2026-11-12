@@ -35,7 +35,7 @@ export type Usage = {
     mode: "hard_cap" | "metered" | "unlimited";
     extraPriceCents: number;
     estimatedExtraCents: number;
-    level: "ok" | "near" | "over";
+    level: "ok" | "near" | "at" | "over";
     canAdd: boolean;
   };
   environments: {
