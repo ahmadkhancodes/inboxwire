@@ -3,16 +3,22 @@ import { getDb } from "@/lib/db";
 import { DELIVERY_TTL_DAYS, type WebhookDelivery } from "@/lib/db/types";
 import { json, withApi } from "@/lib/http";
 import { uuidv7 } from "@/lib/ids";
+import { SANDBOX_PREFIX } from "@/lib/backends/sandbox";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** E2E and screenshots only: seeds the signed-in org with lines, deliveries and sends. 404 unless E2E_OUTBOX=1 (never set on Vercel). */
-export const POST = withApi(async () => {
+export const POST = withApi(async (req) => {
   if (process.env.E2E_OUTBOX !== "1") return json({ error: "not_found" }, 404);
   const ctx = await requireOrg();
   const db = await getDb();
   const env = await db.ensureEnvironment(ctx.org.id, "production");
+  // ?sandbox=1: one line backed by the local stand-in mailbox (src/lib/backends/sandbox.ts), for the docs-run e2e.
+  if (new URL(req.url).searchParams.get("sandbox") === "1") {
+    const a = await db.upsertAccount({ id: uuidv7(), envId: env.id, externalId: `${SANDBOX_PREFIX}user_42`, email: "me@sandbox.example", provider: "imap", backend: "imap", state: "connected", lastError: null, nextPollAt: null, mode: "polling" });
+    return json({ accountId: a.id });
+  }
   const now = Date.now();
   const mk = async (email: string, provider: "google" | "microsoft" | "imap", state: "connected" | "syncing" | "throttled" | "authenticationError" | "connectError", mode: "push" | "polling", lastError: string | null = null) =>
     db.upsertAccount({ id: uuidv7(), envId: env.id, externalId: email, email, provider, backend: provider === "google" ? "gmail_api" : provider === "microsoft" ? "graph" : "imap", state, lastError, nextPollAt: null, mode });

@@ -18,8 +18,8 @@ export function LinesClient({ initial }: { initial: LiveSnapshot }) {
     return (
       <EmptyState
         title="No lines yet" example={<><span className="block truncate">ops@northwind-crm.example · Google · ● live</span><span className="block truncate">intake@kestrel-ats.example · IMAP · ◐ syncing</span></>}
-        body={<>A line appears when a user finishes your connect link. Create one with <code className="font-mono caption-5">POST /v1/connect-links</code>, send the user to the URL, and the lamp lights here.</>}
-        action={<Link href="/docs/api" className={buttonClass("secondary", "md")}>Read the connect docs</Link>}
+        body={<>A line appears when someone finishes a connect link. Use Create connect link above to try it with your own inbox, or create links from your backend with <code className="font-mono caption-5">POST /v1/connect-links</code>. The lamp lights here.</>}
+        action={<Link href="/docs/quickstart" className={buttonClass("secondary", "md")}>Read the quickstart</Link>}
       />
     );
   }
