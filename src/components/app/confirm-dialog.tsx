@@ -37,7 +37,8 @@ export function ConfirmDialog({
       ref={ref}
       aria-labelledby={`${id}-t`}
       onClose={() => { setTyped(""); onClose(); }}
-      onClick={(e) => { if (e.target === ref.current) ref.current?.close(); }}
+      onCancel={(e) => { if (busy) e.preventDefault(); }}
+      onClick={(e) => { if (e.target === ref.current && !busy) ref.current?.close(); }}
       className="m-auto w-full max-w-md rounded-lg border border-border bg-surface p-0 text-text backdrop:bg-surface-inverse/60"
     >
       <form
@@ -55,7 +56,7 @@ export function ConfirmDialog({
         ) : null}
         {error ? <p role="alert" className="caption-2 text-danger">{error}</p> : null}
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="secondary" onClick={() => ref.current?.close()}>{cancelLabel}</Button>
+          <Button type="button" variant="secondary" disabled={busy} onClick={() => ref.current?.close()}>{cancelLabel}</Button>
           <Button type="submit" variant={danger ? "danger" : "primary"} disabled={!ready} loading={busy}>{confirmLabel}</Button>
         </div>
       </form>

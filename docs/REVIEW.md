@@ -61,12 +61,12 @@ Still open:
 
 ## P2
 - DNS rebinding between our check and the socket's own lookup is still possible for IMAP/SMTP and webhooks. A full fix pins the resolved IP (connect by IP with SNI = host).
-- `deletion_record.emailHash` is an unsalted SHA-256 of the address, which a dictionary can reverse. Use an HMAC with a server key.
-- `withBackend` returns the provider's error text (`provider_error.reason`, 200 chars) to API clients. No token was seen in these messages, but map to codes.
-- `/api/health` is liveness only (no Mongo ping). The database is probed separately by `uptime-probe`. Keep it that way for the Docker HEALTHCHECK (restarting the app does not fix Mongo), but name it in the runbook.
-- `confirm-dialog.tsx` closes on backdrop click while `busy`.
-- `docs/selfhost.md` "run several replicas" vs compare page "horizontal scaling planned": align.
-- Docs mention `MS_CLIENT_ID`/`MS_CLIENT_SECRET`, which no code reads (Microsoft is BYO per environment).
+- **DONE (m9: harden deletion hash, health, provider errors, logs, CSV)** `deletion_record.emailHash` was an unsalted SHA-256 of the address, which a dictionary can reverse. Use an HMAC with a server key.
+- **DONE** `withBackend` returned the provider's error text (`provider_error.reason`, 200 chars) to API clients. No token was seen in these messages, but now maps to codes (`authentication`, `rate_limited`, `timeout`, `connection`, `unknown`).
+- **DONE** `/api/health` was liveness only; it now probes the database with a 3 s timeout and reports `up/slow/down` plus configured/not configured for billing and mail, no details. Still 200 when the database is down (Docker HEALTHCHECK must not restart the app for Mongo); `?strict=1` answers 503 for monitors. Was: The database is probed separately by `uptime-probe`. Keep it that way for the Docker HEALTHCHECK (restarting the app does not fix Mongo), but name it in the runbook.
+- **DONE** `confirm-dialog.tsx` closed on backdrop click while `busy`.
+- **DONE** `docs/selfhost.md` "run several replicas" vs compare page "horizontal scaling planned": align.
+- **DONE** Docs mentioned `MS_CLIENT_ID`/`MS_CLIENT_SECRET`, which no code reads (Microsoft is BYO per environment).
 - `tests/unit/m4-live.test.ts` (SSE timing) failed once under full-suite load and passed on 3 reruns: flaky timing, pre-existing.
 
 ## Verified as correct (no change needed)
@@ -89,3 +89,9 @@ Still open:
   - Global `:focus-visible` ring, and native `<dialog>` (focus trap, Escape, focus return).
   - Reduced motion is handled.
   - Body-text contrast is at least 4.5:1 on every surface in both themes. The tightest is muted on sunken in light mode, 4.62.
+
+## Still open after the m9 pass (one-line reasons)
+- P1-7 `MASTER_KEY` rotation: needs a rehearsal against a production backup.
+- P2 DNS rebinding pinning for IMAP/SMTP/webhooks: needs connecting by IP with SNI, a transport change to test against live servers.
+- P2 flaky `m4-live` SSE timing test: did not fail in this pass's runs.
+- Log scrubbing now also redacts e-mail addresses inside string values and nested objects (`tests/unit/m9-handy.test.ts`).

@@ -1,15 +1,16 @@
-import { createHash } from "node:crypto";
+import { createHmac } from "node:crypto";
 import { backendFor, type BackendDeps } from "@/lib/backends";
 import type { DeletionRecord, Db, MailAccount } from "@/lib/db/types";
 import { uuidv7 } from "@/lib/ids";
 import { log } from "@/lib/logger";
-import { openForOrg, orgOfEnv } from "@/lib/secrets";
+import { masterKey, openForOrg, orgOfEnv } from "@/lib/secrets";
 
 // Account deletion (DELETE /v1/accounts/{id}) and the 30 day post-cancellation purge share this flow:
 // stop the provider watch, revoke the token where the provider offers it, delete every row, write a deletion_record.
 
 export const PURGE_AFTER_CANCEL_DAYS = 30;
-const sha = (s: string) => createHash("sha256").update(s.toLowerCase()).digest("hex");
+/** HMAC with a server key, so a dictionary of e-mail addresses cannot reverse it. */
+export const emailDigest = (s: string, key: Buffer = masterKey()) => createHmac("sha256", key).update(`deletion-record:${s.trim().toLowerCase()}`).digest("hex");
 
 export interface DeleteDeps extends BackendDeps {
   /** Revokes a Google token. Default: POST https://oauth2.googleapis.com/revoke. */
@@ -45,7 +46,7 @@ export async function deleteAccount(db: Db, account: MailAccount, reason: Deleti
   const orgId = await orgOfEnv(db, account.envId);
   const revocation = await revokeAccess(db, account, deps);
   const deleted = await db.deleteAccountData(account.id);
-  const rec = await db.addDeletionRecord({ id: uuidv7(), orgId, envId: account.envId, accountId: account.id, emailHash: sha(account.email), reason, revocation, deleted, at: deps.now });
+  const rec = await db.addDeletionRecord({ id: uuidv7(), orgId, envId: account.envId, accountId: account.id, emailHash: emailDigest(account.email), reason, revocation, deleted, at: deps.now });
   await db.appendAudit({ orgId, actorId: null, action: "account.deleted", target: account.id, meta: { reason, revocation }, at: deps.now });
   return rec;
 }

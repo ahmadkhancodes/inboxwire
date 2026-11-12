@@ -92,7 +92,7 @@ describe("live SSE stream", () => {
       if (tick === 1) await db.updateAccount("a1", { state: "authenticationError", lastError: "invalid_grant" });
       if (tick === 2) await emitEvent("org_1", "accountError", { accountId: "a1" }, { db, fetchFn: ok, now: new Date(Date.now() + 1000) });
     };
-    const text = await decode(createLiveStream({ db, orgId: "org_1", intervalMs: 1, maxMs: 4, sleep }));
+    const text = await decode(createLiveStream({ db, orgId: "org_1", intervalMs: 1, maxMs: 250, sleep }));
     expect(text.startsWith("retry: ")).toBe(true);
     const f = frames(text);
     expect(f[0]!.event).toBe("snapshot");

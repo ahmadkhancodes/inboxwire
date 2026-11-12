@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
-import { deleteAccount, purgeCanceled } from "@/lib/accounts/deletion";
+import { deleteAccount, emailDigest, purgeCanceled } from "@/lib/accounts/deletion";
 import { NONE } from "@/lib/billing/entitlement";
 import type { Db, MailAccount } from "@/lib/db/types";
 import { sealForOrg } from "@/lib/secrets";
@@ -28,7 +28,8 @@ describe("deleteAccount", () => {
     const rec = await deleteAccount(db, a, "api", { revokeGoogle: async (t) => { revoked.push(t); return true; }, now: NOW });
     expect(revoked).toEqual(["refresh-1"]);
     expect(rec).toMatchObject({ orgId: "org_1", accountId: "acc_g", reason: "api", revocation: "revoked", deleted: { accounts: 1, credentials: 1, cursors: 1, outbox: 1 } });
-    expect(rec.emailHash).toBe(createHash("sha256").update("me@example.test").digest("hex"));
+    expect(rec.emailHash).toBe(emailDigest("me@example.test"));
+    expect(rec.emailHash).not.toBe(createHash("sha256").update("me@example.test").digest("hex"));
     expect(JSON.stringify(rec)).not.toContain("me@example.test");
     expect(await db.getAccount("acc_g")).toBeNull();
     expect(await db.getCredentials("acc_g")).toBeNull();

@@ -40,7 +40,10 @@ export function DeliveriesClient({ canReplay }: { canReplay: boolean }) {
       {notice ? <Notice tone={notice.ok ? "success" : "warning"} title={notice.ok ? "Delivered" : "Not delivered"}>{notice.text}</Notice> : null}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="caption-2 text-text-subtle tabular-nums">{rows.length} most recent, {failed} failed and not replayed</p>
-        <Button variant="secondary" size="sm" onClick={list.reload}>Refresh</Button>
+        <span className="flex gap-2">
+          <a href="/api/webhooks/deliveries?format=csv" download className={buttonClass("secondary", "sm")}>Export CSV</a>
+          <Button variant="secondary" size="sm" onClick={list.reload}>Refresh</Button>
+        </span>
       </div>
       <DataTable caption="Webhook deliveries" columns={[{ key: "t", label: "Queued" }, { key: "e", label: "Event" }, { key: "s", label: "Status" }, { key: "c", label: "Code", align: "right" }, { key: "ms", label: "Latency", align: "right" }, { key: "a", label: "Attempts", align: "right" }, { key: "r", label: "" }]}>
         {rows.map((d) => (
