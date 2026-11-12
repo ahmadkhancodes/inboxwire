@@ -17,7 +17,7 @@ export default async function SignInPage({ searchParams }: { searchParams: SP })
   return (
     <>
       <div className="flex flex-col gap-2">
-        <h1 className="heading-5 text-text">Sign in to {product.name}</h1>
+        <h1 className="heading-4 md:heading-3 text-text">Sign in to {product.name}</h1>
         <p className="body-6 text-text-subtle">We email you a link, so there is no password to remember. New here? The same link creates your account.</p>
       </div>
       <SignInForm callbackURL={callbackURL} expiredLink={link} />

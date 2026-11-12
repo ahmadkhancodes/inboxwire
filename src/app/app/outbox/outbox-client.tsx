@@ -18,7 +18,7 @@ export function OutboxClient() {
   if (list.loading && !list.data) return <div aria-busy="true" aria-label="Loading outbox" className="flex flex-col gap-3"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>;
   if (list.error && !list.data) return <ErrorState title="Could not load the outbox" body={list.error} action={<Button variant="secondary" onClick={list.reload}>Try again</Button>} />;
   const rows = list.data ?? [];
-  if (rows.length === 0) return <EmptyState title="Nothing queued" body="Sends appear here the moment your API call returns 202, with the attempts and the provider's error if one failed." action={<Link href="/docs/api" className={buttonClass("secondary", "md")}>Read the send docs</Link>} />;
+  if (rows.length === 0) return <EmptyState title="Nothing queued" example={<><span className="block truncate">obx_7Hq2… · sent · 1 attempt · production</span><span className="block truncate">obx_9Ka4… · retrying · 2 attempts · 429 from Graph</span></>} body="Sends appear here the moment your API call returns 202, with the attempts and the provider's error if one failed." action={<Link href="/docs/api" className={buttonClass("secondary", "md")}>Read the send docs</Link>} />;
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end"><Button variant="secondary" size="sm" onClick={list.reload}>Refresh</Button></div>

@@ -1,11 +1,12 @@
 import { product } from "@/config/product";
 
-/** "Inboxwire" in Chivo 800 + "by BufferSol" in Martian Mono on an amber jack tab (docs/DESIGN.md). */
+/** "Inboxwire" in Plex Sans Condensed 700 + "by BufferSol" in Plex Mono, separated by a hairline (docs/design-brief.md). */
 export function Wordmark() {
   return (
     <span className="inline-flex items-center gap-2">
-      <span className="font-display text-text" style={{ fontWeight: 800, fontSize: 18, lineHeight: 1 }}>{product.name}</span>
-      <span className="whitespace-nowrap rounded-sm bg-action px-2 py-1 font-mono text-action-text" style={{ fontWeight: 500, fontSize: 10, lineHeight: 1 }}>by BufferSol</span>
+      <span aria-hidden className="inline-block size-3 bg-mark ring-1 ring-text" />
+      <span className="font-display text-text" style={{ fontWeight: 700, fontSize: 20, lineHeight: 1, letterSpacing: "-0.01em" }}>{product.name}</span>
+      <span className="whitespace-nowrap border-l border-border-strong pl-2 font-mono text-text-subtle" style={{ fontWeight: 400, fontSize: 11, lineHeight: 1 }}>by BufferSol</span>
     </span>
   );
 }

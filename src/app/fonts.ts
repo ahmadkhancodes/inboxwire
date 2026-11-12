@@ -1,6 +1,6 @@
-import { Chivo, Public_Sans, Martian_Mono } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Condensed } from "next/font/google";
 
-// docs/DESIGN.md: Chivo display (600/800), Public Sans body, Martian Mono for IDs, events and code.
-export const display = Chivo({ subsets: ["latin"], weight: ["600", "800"], variable: "--font-kit-display", display: "swap" });
-export const sans = Public_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-kit-sans", display: "swap" });
-export const mono = Martian_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-kit-mono", display: "swap" });
+// docs/design-brief.md §6: one superfamily in three widths. Condensed for display, Sans for text, Mono for fields, ids and figures.
+export const display = IBM_Plex_Sans_Condensed({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-kit-display", display: "swap" });
+export const sans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-kit-sans", display: "swap" });
+export const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-kit-mono", display: "swap" });

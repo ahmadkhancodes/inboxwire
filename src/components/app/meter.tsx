@@ -11,8 +11,8 @@ export function Meter({ state }: { state: UsageState }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-baseline justify-between gap-4">
-        <p className="title-4 text-text">{name}</p>
-        <p className="caption-2 text-text-subtle tabular-nums">
+        <p className="font-mono caption-5 text-text-muted">{name}</p>
+        <p className="font-mono body-5 text-text tabular-nums">
           {fmt(state.used)} of {fmt(state.limit)}{label.period ? ` ${label.period}` : ""}
         </p>
       </div>
@@ -22,7 +22,7 @@ export function Meter({ state }: { state: UsageState }) {
         aria-valuemin={0}
         aria-valuemax={state.limit}
         aria-valuenow={Math.min(state.used, state.limit)}
-        className="h-2 w-full overflow-hidden rounded-sm bg-surface-sunken"
+        className="h-1 w-full overflow-hidden bg-surface-sunken"
       >
         <div
           className={`h-full w-full origin-left transition-transform duration-500 ease-out-kit ${bar[state.level]}`}

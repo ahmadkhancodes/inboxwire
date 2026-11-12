@@ -210,7 +210,7 @@ export function BillingClient(p: Props) {
                 ) : p.isPaid ? (
                   <Button variant="secondary" onClick={portal} loading={busy === "portal"} disabled={!p.canManage}>Change in billing portal</Button>
                 ) : (
-                  <Button onClick={() => checkout(pl)} loading={busy === pl.id} disabled={!p.canManage || !!busy}>{pl.cta}</Button>
+                  <Button variant={pl.featured ? "primary" : "secondary"} onClick={() => checkout(pl)} loading={busy === pl.id} disabled={!p.canManage || !!busy}>{pl.cta}</Button>
                 )}
               </article>
             );

@@ -28,7 +28,7 @@ export default async function BillingPage({ searchParams }: { searchParams: SP }
   const wanted = want ? planById(want) : undefined;
   return (
     <>
-      <PageHeader title="Billing" description={`Plan, usage and invoices for ${ctx.org.name}.`} />
+      <PageHeader field="Account / billing" title="Billing" description={`Plan, usage and invoices for ${ctx.org.name}.`} />
       <BillingClient
         canManage={can(ctx.role, "billing", "manage")}
         planId={plan.id}

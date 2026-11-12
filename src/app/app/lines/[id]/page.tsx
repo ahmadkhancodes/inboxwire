@@ -24,6 +24,7 @@ export default async function LineDetail({ params }: { params: Promise<{ id: str
     <>
       <AutoRefresh seconds={5} />
       <PageHeader
+        field="Mail / lines / line"
         title={a.email}
         description={<><Link href="/app/lines" className="underline underline-offset-4 focus-visible:focus-ring">All lines</Link> · {a.provider} via {a.backend} · {env.name} · {a.mode === "push" ? "push" : "polling mode"}</>}
         actions={<StatusLamp state={lampOf(a)} label={lampLabel(a)} />}

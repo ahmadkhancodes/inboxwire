@@ -44,10 +44,10 @@ export function PricingTable({ id = "pricing", title }: { id?: string; title?: s
   return (
     <div id={id}>
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        {title ? <h2 id={`${id}-title`} className="heading-4 md:heading-2 text-text">{title}</h2> : <span />}
+        {title ? <h2 id={`${id}-title`} className="heading-4 md:heading-2 text-text">{title}</h2> : <p className="font-mono caption-5 text-text-muted">{plans.length} plans · prices in USD</p>}
         {saving ? (
           <div className="flex flex-col gap-2 md:items-end">
-            <div role="group" aria-label="Billing interval" className="inline-flex w-fit rounded-lg border border-border bg-surface-raised p-1">
+            <div role="group" aria-label="Billing interval" className="inline-flex w-fit rounded-sm border border-border-strong bg-surface p-0.5">
               {options.map((o) => (
                 <button
                   key={o.id}
@@ -55,8 +55,8 @@ export function PricingTable({ id = "pricing", title }: { id?: string; title?: s
                   aria-pressed={interval === o.id}
                   onClick={() => setBilling(o.id)}
                   className={cn(
-                    "min-h-11 rounded-md px-4 button-sm transition-colors duration-300 ease-out-kit focus-visible:focus-ring",
-                    interval === o.id ? "bg-surface text-text" : "text-text-subtle hover:text-text",
+                    "min-h-11 rounded-sm px-4 button-sm transition-colors duration-300 ease-out-kit focus-visible:focus-ring",
+                    interval === o.id ? "bg-text text-text-inverse" : "text-text-subtle hover:text-text",
                   )}
                 >
                   {o.label}
@@ -68,7 +68,7 @@ export function PricingTable({ id = "pricing", title }: { id?: string; title?: s
         ) : null}
       </div>
 
-      <ul className="mt-8 grid gap-4 md:mt-12 md:grid-cols-2 lg:grid-cols-4 lg:gap-y-0">
+      <ul className="mt-8 grid border-l border-t border-border-strong md:mt-12 md:grid-cols-2 lg:grid-cols-4">
         {plans.map((plan) => {
           const price = priceFor(plan, interval);
           const free = !price;
@@ -77,28 +77,28 @@ export function PricingTable({ id = "pricing", title }: { id?: string; title?: s
             <li
               key={plan.id}
               className={cn(
-                "grid grid-rows-[auto_auto_auto_auto_1fr] rounded-lg border bg-surface p-6 lg:row-span-5 lg:grid-rows-subgrid",
-                plan.featured ? "border-action ring-1 ring-action" : "border-border",
+                "relative grid grid-rows-[auto_auto_auto_auto_1fr] border-b border-r border-border-strong bg-surface p-6 lg:row-span-5 lg:grid-rows-subgrid",
+                plan.featured && "bg-surface-sunken before:absolute before:inset-x-0 before:-top-px before:h-1 before:bg-text",
               )}
             >
               <div className="pb-6">
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="heading-6 text-text">{plan.name}</h3>
-                  {plan.featured ? <span className="caption-3 text-action">Most popular</span> : null}
+                  <h3 className="heading-5 text-text">{plan.name}</h3>
+                  {plan.featured ? <span className="bg-mark px-1 font-mono caption-4 text-text">Most popular</span> : null}
                 </div>
                 <p className="body-6 mt-1 text-text-subtle">{plan.tagline}</p>
               </div>
               <p className="flex items-baseline gap-1 pb-6">
-                <span className="heading-3 tabular-nums text-text">{free ? "$0" : money(price.usd)}</span>
-                <span className="body-6 text-text-subtle">{free ? "free" : `per ${price.interval}`}</span>
+                <span className="heading-3 font-mono tabular-nums text-text" style={{ fontFamily: "var(--font-mono-family)", fontWeight: 500, letterSpacing: "-0.03em" }}>{free ? "$0" : money(price.usd)}</span>
+                <span className="font-mono caption-5 text-text-subtle">{free ? "free" : `/ ${price.interval}`}</span>
               </p>
               <div className="pb-3">
                 <Link href={href} className={cn(buttonClass(plan.featured ? "primary" : "secondary", "md"), "w-full")}>{plan.cta}</Link>
               </div>
               <p className="caption-2 pb-6 text-text-subtle">{free ? RISK_FREE : RISK_PAID}</p>
-              <ul className="flex flex-col gap-2 border-t border-border pt-6">
+              <ul className="flex flex-col border-t border-border">
                 {plan.highlights.map((h) => (
-                  <li key={h} className="flex items-start gap-2 body-6 text-text">
+                  <li key={h} className="flex items-start gap-2 border-b border-border py-2 body-6 text-text last:border-b-0">
                     <Check size={16} weight="regular" aria-hidden className="mt-0.5 shrink-0 text-success" />
                     <span>{h}</span>
                   </li>

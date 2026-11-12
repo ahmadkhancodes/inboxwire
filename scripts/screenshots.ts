@@ -12,7 +12,7 @@ const WIDTHS = [375, 1440];
 
 async function main() {
   mkdirSync(OUT, { recursive: true });
-  const browser = await chromium.launch();
+  const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {});
   const problems: string[] = [];
   {
     const theme = "light" as const;

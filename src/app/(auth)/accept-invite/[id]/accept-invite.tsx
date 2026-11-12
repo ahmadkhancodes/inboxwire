@@ -64,7 +64,7 @@ export function AcceptInvite({ id, email }: { id: string; email: string }) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="heading-5 text-text">Join {name}</h1>
+        <h1 className="heading-4 text-text">Join {name}</h1>
         <p className="body-6 text-text-subtle">
           You were invited as {i.role}. You are signed in as {email}.
         </p>

@@ -12,7 +12,7 @@ export default async function WebhooksPage() {
   const ctx = await requireOrg({ page: true });
   return (
     <>
-      <PageHeader title="Webhooks" description="We POST signed JSON to your URL when something happens. Failed deliveries retry with backoff, and every attempt is logged below." />
+      <PageHeader field="Developers / webhooks" title="Webhooks" description="We POST signed JSON to your URL when something happens. Failed deliveries retry with backoff, and every attempt is logged below." />
       <WebhooksClient canManage={can(ctx.role, "webhook", "manage")} events={EVENTS} />
     </>
   );

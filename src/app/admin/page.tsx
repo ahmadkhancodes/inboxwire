@@ -14,7 +14,7 @@ export default async function AdminPage() {
   ];
   return (
     <>
-      <PageHeader title="Admin overview" description="Totals across every organization. Visible to founder accounts only." />
+      <PageHeader field="Founder / admin overview" title="Admin overview" description="Totals across every organization. Visible to founder accounts only." />
       <div className="flex flex-col gap-8">
         <dl className="grid gap-4 sm:grid-cols-3">
           {stats.map((s) => (

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Meter } from "@/components/app/meter";
 import { METERS_SHOWN } from "@/components/app/labels";
-import { PageHeader, Panel } from "@/components/app/page-header";
+import { PageHeader } from "@/components/app/page-header";
 import { buttonClass } from "@/components/ui/button";
 import { Badge } from "@/components/ui/states";
 import { requireOrg } from "@/lib/auth/session";
@@ -26,39 +26,47 @@ export default async function OverviewPage() {
   const usage = await currentUsage(db, ctx.org.id, METERS_SHOWN);
   return (
     <>
-      <PageHeader title={ctx.org.name} description={`Signed in as ${ctx.user.email}.`} />
-      <div className="grid gap-6 lg:grid-cols-3">
-        <section aria-labelledby="plan-h" className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-6">
-          <div className="flex items-center justify-between gap-2">
-            <h2 id="plan-h" className="title-4 text-text-subtle">Current plan</h2>
+      <PageHeader field={`${ctx.org.name} / overview`} title={ctx.org.name} description={`Signed in as ${ctx.user.email}.`} />
+      <dl className="m-0 grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex flex-col gap-2 bg-surface p-4">
+          <dt className="flex items-center justify-between gap-2 font-mono caption-5 text-text-muted">
+            <span id="plan-h">Plan</span>
             {ent?.status === "past_due" ? <Badge tone="warning">Payment failed</Badge> : ent?.cancelAtPeriodEnd ? <Badge tone="warning">Ends soon</Badge> : <Badge tone="success">Active</Badge>}
+          </dt>
+          <dd className="m-0 flex flex-col gap-1">
+            <span className="heading-5 text-text">{plan.name}</span>
+            <span className="body-6 text-text-subtle">{plan.tagline}</span>
+            <Link href="/app/billing" className="mt-1 inline-flex min-h-11 w-fit items-center body-4 text-text underline decoration-border-strong decoration-2 underline-offset-4 hover:decoration-text focus-visible:focus-ring">
+              {plan.id === "free" ? "See plans" : "Manage plan"}
+            </Link>
+          </dd>
+        </div>
+        {usage.map((u) => (
+          <div key={u.meter} className="flex flex-col justify-end bg-surface p-4">
+            <Meter state={u} />
           </div>
-          <p className="heading-4 text-text">{plan.name}</p>
-          <p className="body-6 text-text-subtle">{plan.tagline}</p>
-          <Link href="/app/billing" className={buttonClass("secondary", "md", "self-start")}>
-            {plan.id === "free" ? "See plans" : "Manage plan"}
-          </Link>
-        </section>
-        <section aria-labelledby="usage-h" className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-6 lg:col-span-2">
-          <h2 id="usage-h" className="title-4 text-text-subtle">Usage</h2>
-          <div className="flex flex-col gap-6">
-            {usage.map((u) => <Meter key={u.meter} state={u} />)}
-          </div>
-        </section>
-      </div>
-      <Panel title="Get to your first webhook" description="Four steps, about ten minutes. Each opens the screen where you do it.">
-        <ol className="flex flex-col gap-3">
+        ))}
+      </dl>
+      <section aria-labelledby="steps-h" className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <h2 id="steps-h" className="heading-6 text-text">Get to your first webhook</h2>
+          <p className="body-6 text-text-subtle">Four steps, about ten minutes. Each opens the screen where you do it.</p>
+        </div>
+        <ol className="m-0 border-y border-border p-0">
           {STEPS.map((st, n) => (
-            <li key={st.href} className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border p-4">
-              <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <p className="title-4 text-text">{n + 1}. {st.title}</p>
+            <li key={st.href} className="grid items-center gap-x-6 gap-y-2 border-t border-border py-4 first:border-t-0 sm:grid-cols-12">
+              <span aria-hidden className="font-mono caption-5 tabular-nums text-text-muted sm:col-span-1">{String(n + 1).padStart(2, "0")}</span>
+              <div className="flex min-w-0 flex-col gap-1 sm:col-span-8">
+                <p className="title-3 text-text"><span className="sr-only">{n + 1}. </span>{st.title}</p>
                 <p className="body-6 text-text-subtle">{st.body}</p>
               </div>
-              <Link href={st.href} className={buttonClass(n === 0 ? "primary" : "secondary")}>{st.cta}</Link>
+              <div className="sm:col-span-3 sm:justify-self-end">
+                <Link href={st.href} className={buttonClass(n === 0 ? "primary" : "secondary")}>{st.cta}</Link>
+              </div>
             </li>
           ))}
         </ol>
-      </Panel>
+      </section>
     </>
   );
 }
