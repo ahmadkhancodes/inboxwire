@@ -56,3 +56,34 @@ Method: same production build and memory DB as `playwright.config.ts`; real Chro
 - **Low: e-mail, OG image and icon use system sans** (no web fonts inside e-mail clients or `next/og` without bundling font files). Colour and shape now match the system.
 - **Low:** the earlier open items (refresh buttons give no visible feedback; foreign `/app/lines/<id>` returns 200 with the 404 UI) are unchanged.
 - **Not testable here:** Stripe-hosted checkout and portal pages, real Gmail/Microsoft consent, live provider mail. The CSP `form-action` allows `checkout.stripe.com` and `billing.stripe.com` and the app navigates with `window.location.assign` (not a form), so the dashboard buttons are not blocked; confirmed by the "every enabled button does something" spec showing the explanatory notice when Stripe is not configured.
+
+## Usefulness pass (2026-11-12, specs `tests/e2e/personas.spec.ts`, `tests/e2e/docs-run.spec.ts`)
+Method: same production build and memory DB as `playwright.config.ts`, real Chromium, sign-in through the form and the e-mail outbox. Personas from the brief's ICP. Nothing deployed.
+
+### Personas and their week (before the fixes)
+- **Felix, founder of a 3-person AI email agent startup** (brief persona "Founder Felix"). Day 1: signs up, lands on the overview. The checklist says "Connect a mailbox: create a connect link from the API", but the Lines screen only offers "Read the connect docs". To see a single line he must create a key, read the quickstart and run curl. The default key scope is read, and the first quickstart call (connect link) needs admin, so his first curl answers 403. Day 2: creates a key; the reveal shows only the raw key, no command. Day 7: nothing tells him how far he got; the checklist never changes.
+- **Clara, CTO of a 20-person vertical CRM** ("CTO Clara"). Day 2: invites her backend lead (works, e-mail arrives). Day 7: her customers connect mailboxes from her product; the fourth is refused on Developer. The end user sees "Ask the app owner to upgrade"; Clara sees nothing: no e-mail, no notice until she happens to open the dashboard. Creating another link from the API at the cap succeeds and fails later at her customer.
+- **Ian, ops engineer wiring n8n** ("Internal-tools Ian"). Day 1: follows Getting started: "Open Settings, then API keys" (no such path; it is Keys), "upgrade from Settings, then Billing" (Billing is top level). Day 2: adds a webhook; the webhooks guide names headers x-webhook-* while the quickstart and SDK use Inboxwire-Signature. Self-host trial: `docker compose up` fails with a YAML error before anything starts, and the documented `grep -i "sign-in"` never finds the printed magic link.
+
+### Top five frictions fixed
+| Friction | Fix | Test |
+|---|---|---|
+| No way to see a first line without writing code (connect links were API-only). | Lines: "Connect a mailbox" panel, Create connect link -> copyable single-use URL + Open. 2 clicks from the overview (budget asserted). | `personas.spec.ts` Felix |
+| New key, then a 403 or a blank terminal: no command, scope mismatch with the quickstart. | Key reveal shows a curl personalised with the real key and this host, chosen for the key's scope (admin: connect link; read/send: list accounts, and says what needs admin). Executed in the test exactly as shown. | `personas.spec.ts` Felix + Ian, `usefulness.test.ts` |
+| Static onboarding checklist. | Overview shows "N of 4 done", a Done badge per finished step, and the next open step as the primary button (keys, endpoints, lines, deliveries read from the DB). | `personas.spec.ts`, `usefulness.test.ts` |
+| Refused connects at the plan cap were invisible to the developer. | Owners get one e-mail per day: what happened, what to do, link to `/app/billing?plan=<next>`; the dashboard connect panel warns before handing out a link that would be refused. | `limit-notice-connect.test.ts`, `usefulness.test.ts`, `personas.spec.ts` Clara |
+| Docs that did not match the product. | Home page connect example used `account`/`redirect` and an `expiresIn` response (fields that do not exist): now the real `externalId`/`redirectUrl`/`expiresAt`. Stale "Settings, then ..." paths fixed in five docs. /v1 + Bearer used everywhere (both /api/v1 and x-api-key still work). Webhook headers named consistently. `docker-compose.yml` was invalid YAML (unquoted `:?generate with: ...` messages): quoted. Self-host grep fixed to `magic-link`. /docs/api placeholders now name the right resource (`wh_123`, `out_123`). | `docs-run.spec.ts`, `docs-samples.test.ts` |
+
+### Docs are executed
+- Every bash/curl block in `src/content/docs` (except self-host, which needs Docker and a VM), every `/docs/api` operation curl (all 20 operations, destructive last; the test fails if an operation is added without being run), the home page example, the Python and Go quickstarts and the TypeScript SDK sample run against the app. Mailboxes are the E2E-only sandbox backend.
+- Webhook verification samples (Node x3 incl. the SDK handler, Python, Go) verify a real signature from our signer and reject a forged and a stale one.
+- Self-host: the `.env` block plus `docker compose config` passes, and refuses with the openssl hint when a secret is missing; the documented log grep finds the printed link. `docker compose up` itself (image build, Mongo) is not run here.
+- Pricing: page and doc numbers come from `src/config/product.ts`; the home page's hard-coded $708, $0.99 and "3 mailboxes" and the product description are now asserted against it (`usefulness.test.ts`), in addition to the existing qa2 pricing checks.
+
+### Billing path (`tests/unit/billing-journey.test.ts`)
+Free org at 3 of 3 mailboxes -> Growth monthly Checkout Session (price from lookup key `inboxwire_growth_monthly`, `metadata.app=inboxwire` on session, subscription and customer, success `.../app/billing?checkout=success&session_id={CHECKOUT_SESSION_ID}`, cancel `...?checkout=canceled`, shared with the route via `checkoutReturnUrls`) -> `checkout.session.completed` activates Growth with metered mailboxes (100 included, $0.99 extra) and its environment limit -> portal session for that customer returning to billing -> cancel at period end keeps Growth -> `customer.subscription.deleted` returns to Developer (3 included, adding blocked). Not testable here: Stripe-hosted card entry and the real webhook signature from Stripe.
+
+### Left open
+- An "Updated just now" stamp on refresh buttons and the `/app/lines/<id>` 200-with-404 (unchanged, low).
+- Import from Nylas/EmailEngine account lists and keyboard shortcuts were considered and not done (lower impact than the five above for these personas).
+- The v1 `POST /v1/connect-links` still succeeds at the cap (the refusal happens at the end user's last step, now with an owner e-mail). Returning a warning field there changes the API contract and the SDK; left as a product decision.

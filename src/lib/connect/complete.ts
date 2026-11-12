@@ -5,6 +5,7 @@ import { appUrl } from "@/lib/env";
 import { HttpError } from "@/lib/http";
 import { uuidv7 } from "@/lib/ids";
 import { assertCanAddMailbox, mailboxUsage, syncExtraMailboxes } from "@/lib/billing/mailboxes";
+import { notifyMailboxLimit } from "@/lib/billing/limit-notice";
 import { getStripe } from "@/lib/billing/stripe";
 import { log } from "@/lib/logger";
 import { assertPublicHost } from "@/lib/security/net";
@@ -46,7 +47,17 @@ async function tryPush(db: Db, a: MailAccount, deps: CompleteDeps): Promise<Mail
 /** 402 `mailbox_limit` before a NEW mailbox is added past a hard-capped plan (reconnecting an existing address is always allowed). */
 export async function ensureCapacity(db: Db, envId: string, email: string | null) {
   if (email && (await db.findAccountByEmail(envId, email.toLowerCase()))) return;
-  await assertCanAddMailbox(db, await orgOfEnv(db, envId));
+  const orgId = await orgOfEnv(db, envId);
+  await assertCanAddMailbox(db, orgId).catch((e) => tellOwners(db, orgId, e));
+}
+
+/** A refused connect is invisible to the developer otherwise: their end user saw a message, they saw nothing. */
+async function tellOwners(db: Db, orgId: string, e: unknown): Promise<never> {
+  if (e instanceof HttpError && e.code === "mailbox_limit") {
+    const d = (e.details ?? {}) as { plan?: string; limit?: number };
+    await notifyMailboxLimit(db, orgId, (d.plan ?? "free") as Parameters<typeof notifyMailboxLimit>[2], d.limit ?? 0);
+  }
+  throw e;
 }
 
 /**
@@ -62,7 +73,7 @@ async function enforceCapAfterInsert(db: Db, orgId: string, accountId: string) {
   all.sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime() || x.id.localeCompare(y.id));
   if (all.findIndex((x) => x.id === accountId) < u.included) return;
   await db.deleteAccountData(accountId);
-  throw new HttpError(402, "mailbox_limit", { plan: u.plan.id, limit: u.included, used: u.included });
+  await tellOwners(db, orgId, new HttpError(402, "mailbox_limit", { plan: u.plan.id, limit: u.included, used: u.included }));
 }
 
 /** Best effort: bill the extra mailboxes of a Growth subscription after the count changed. */

@@ -7,6 +7,7 @@ import { GmailBackend, type GmailLike } from "./gmail";
 import { GraphBackend, type GraphLike } from "./graph";
 import { ImapBackend, imapflowFactory, type ImapFactory, type ImapSettings } from "./imap";
 import { assertPublicHost, type Lookup } from "@/lib/security/net";
+import { isSandboxAccount, sandboxBackend } from "./sandbox";
 import { makeSmtpSend, nodemailerFactory, type SmtpSettings, type SmtpTransportFactory } from "./smtp";
 
 /** Emits a webhook event for an org; `ctx.envId` scopes it to endpoints of that environment. */
@@ -21,6 +22,7 @@ const SYNC_LEASE_MS = 2 * 60_000;
 
 /** Decrypts credentials (refreshing an expired OAuth access token) and builds the right MailBackend. */
 export async function backendFor(db: Db, account: MailAccount, deps: BackendDeps = {}): Promise<MailBackend> {
+  if (isSandboxAccount(account.externalId)) return sandboxBackend();
   const orgId = await orgOfEnv(db, account.envId);
   const cred = await db.getCredentials(account.id);
   if (!cred) throw new Error("no_credentials");

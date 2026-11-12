@@ -5,8 +5,9 @@ import { Container } from "@/components/ui/layout";
 import { docGroups } from "@/content/docs";
 import { product, cadence } from "@/config/product";
 import { appUrl } from "@/lib/env";
-import { buildOpenApi, operations, type Operation } from "@/lib/openapi";
+import { buildOpenApi, operations } from "@/lib/openapi";
 import { pageMetadata } from "@/lib/seo";
+import { operationCurl, VERIFY_NODE } from "@/lib/docs-curl";
 
 export const metadata = pageMetadata({
   title: "API reference",
@@ -52,19 +53,6 @@ function Params({ title, rows }: { title: string; rows: Prop[] }) {
   );
 }
 
-const SAMPLE_BODY: Record<string, string> = {
-  sendMessage: '{"to":[{"address":"ana@example.com"}],"subject":"Hello","text":"Sent through Inboxwire"}',
-  createWebhook: '{"url":"https://example.com/hooks/inboxwire"}',
-};
-
-function curl(op: Operation, base: string) {
-  const path = op.path.replace("{id}", "acc_123").replace("{mid}", "msg_456").replace("{aid}", "att_789");
-  const parts = [`curl ${op.method === "get" ? "" : `-X ${op.method.toUpperCase()} `}${base}/v1${path}`.replace("curl  ", "curl "), `-H "Authorization: Bearer $INBOXWIRE_KEY"`];
-  if (op.idempotent) parts.push(`-H "Idempotency-Key: order-1042-receipt"`);
-  if (op.body) parts.push(`-H "Content-Type: application/json"`, `-d '${SAMPLE_BODY[op.id] ?? "{}"}'`);
-  return parts.join(" \\\n  ");
-}
-
 const EVENTS: Prop[] = [
   { name: "messageNew", type: "event", required: false, description: "A message arrived. The default for new endpoints." },
   { name: "messageMoved", type: "event", required: false, description: "Labels or folder changed." },
@@ -76,15 +64,7 @@ const EVENTS: Prop[] = [
   { name: "accountError", type: "event", required: false, description: "The mailbox needs attention." },
 ];
 
-const VERIFY = `import { createHmac, timingSafeEqual } from "node:crypto";
 
-export function verify(secret, rawBody, header) {
-  const p = Object.fromEntries(header.split(",").map((x) => x.split("=")));
-  if (Math.abs(Date.now() / 1000 - Number(p.t)) > 300) return false;
-  const mac = createHmac("sha256", secret).update(p.t + "." + rawBody).digest();
-  const given = Buffer.from(p.v1, "hex");
-  return given.length === mac.length && timingSafeEqual(given, mac);
-}`;
 
 const Code = ({ children }: { children: React.ReactNode }) => <code className="font-mono">{children}</code>;
 
@@ -138,7 +118,7 @@ export default function ApiReferencePage() {
                     <Params title="Path parameters" rows={path} />
                     <Params title="Query and headers" rows={other} />
                     <Params title="Request body (JSON)" rows={flat(spec.requestBody?.content["application/json"].schema)} />
-                    <CodeBlock code={curl(op, base)} lang="curl" />
+                    <CodeBlock code={operationCurl(op, base)} lang="curl" />
                   </div>
                 );
               })}
@@ -149,7 +129,7 @@ export default function ApiReferencePage() {
             <h2 id="events-h" className="heading-5 text-text">Webhook events and signatures</h2>
             <p className="body-3 text-text-subtle">Events are POSTed as JSON <Code>{`{"id","type","created","data"}`}</Code>. The <Code>id</Code> stays the same on retries and replays, so use it to dedupe. Return any 2xx within 10 seconds; otherwise {cadence.retryApi}. After 72 hours of failures the endpoint is disabled and the owners get an email. Failed events stay in the delivery log and can be replayed.</p>
             <p className="body-3 text-text-subtle">Verify every request: compute HMAC-SHA256 of <Code>{"<t>.<raw body>"}</Code> with your endpoint secret and compare it to <Code>v1</Code> in the <Code>Inboxwire-Signature</Code> header. Reject timestamps older than five minutes.</p>
-            <CodeBlock lang="node" code={VERIFY} />
+            <CodeBlock lang="node" code={VERIFY_NODE} />
             <Params title="Events" rows={EVENTS} />
           </section>
         </article>

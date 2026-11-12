@@ -16,7 +16,7 @@ export const selfHost: DocPage = {
     {
       heading: "Start it",
       body: ["Generate the four secrets once and keep them: MASTER_KEY wraps the keys that encrypt mailbox credentials, so losing it makes stored credentials unreadable. Then start the stack."],
-      code: { lang: "bash", code: `git clone https://github.com/ahmadkhancodes/inboxwire && cd inboxwire\ncat > .env <<EOF\nNEXT_PUBLIC_APP_URL=https://mail.example.com\nBETTER_AUTH_SECRET=$(openssl rand -base64 32)\nMASTER_KEY=$(openssl rand -base64 32)\nCRON_SECRET=$(openssl rand -hex 24)\nALTCHA_HMAC_KEY=$(openssl rand -hex 24)\nADMIN_EMAILS=you@example.com\nEOF\ndocker compose up -d\ndocker compose logs app | grep -i "sign-in"` },
+      code: { lang: "bash", code: `git clone https://github.com/ahmadkhancodes/inboxwire && cd inboxwire\ncat > .env <<EOF\nNEXT_PUBLIC_APP_URL=https://mail.example.com\nBETTER_AUTH_SECRET=$(openssl rand -base64 32)\nMASTER_KEY=$(openssl rand -base64 32)\nCRON_SECRET=$(openssl rand -hex 24)\nALTCHA_HMAC_KEY=$(openssl rand -hex 24)\nADMIN_EMAILS=you@example.com\nEOF\ndocker compose up -d\ndocker compose logs app | grep -i magic-link` },
     },
     {
       heading: "First sign-in",

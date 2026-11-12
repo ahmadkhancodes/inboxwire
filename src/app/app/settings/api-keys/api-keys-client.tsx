@@ -2,13 +2,14 @@
 import { useState } from "react";
 import { authError, formatDate, useAsync } from "@/components/app/api";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
-import { SecretReveal } from "@/components/app/copy-button";
+import { CopyButton, SecretReveal } from "@/components/app/copy-button";
 import { DataTable, Td } from "@/components/app/data-table";
 import { Panel } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { EmptyState, ErrorState, Notice, Skeleton } from "@/components/ui/states";
 import { authClient } from "@/lib/auth/client";
+import { firstCallSnippet, type SnippetScope } from "@/lib/snippets";
 
 interface KeyRow { id: string; name: string | null; start: string | null; prefix: string | null; createdAt: string | Date; lastRequest: string | Date | null; metadata?: unknown }
 
@@ -35,7 +36,7 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
   const [envChoice, setEnvChoice] = useState<EnvChoice>("production");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<{ name: string; key: string } | null>(null);
+  const [created, setCreated] = useState<{ name: string; key: string; scopes: SnippetScope[] } | null>(null);
   const [removing, setRemoving] = useState<KeyRow | null>(null);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -46,10 +47,11 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
     if (!clean) return setError("Name the key after where it will be used, for example Production server.");
     setBusy(true);
     setError(null);
-    const { data, error: err } = await authClient.apiKey.create({ name: clean, organizationId: orgId, metadata: { scopes: scope === "admin" ? ["read", "send", "admin"] : scope === "send" ? ["read", "send"] : ["read"], ...(envChoice === "any" ? {} : { environment: envChoice }) } });
+    const scopes: SnippetScope[] = scope === "admin" ? ["read", "send", "admin"] : scope === "send" ? ["read", "send"] : ["read"];
+    const { data, error: err } = await authClient.apiKey.create({ name: clean, organizationId: orgId, metadata: { scopes, ...(envChoice === "any" ? {} : { environment: envChoice }) } });
     setBusy(false);
     if (err || !data) return setError(authError(err, "We could not create the key. Try again."));
-    setCreated({ name: clean, key: (data as unknown as { key: string }).key });
+    setCreated({ name: clean, key: (data as unknown as { key: string }).key, scopes });
     setName("");
     keys.reload();
   }
@@ -69,6 +71,7 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
     <div className="flex flex-col gap-6">
       {!canManage ? <Notice title="Read only">Only owners and admins can create or delete API keys.</Notice> : null}
       {created ? <SecretReveal title={`Key created: ${created.name}`} value={created.key} onDismiss={() => setCreated(null)} /> : null}
+      {created ? <TryIt keyValue={created.key} scopes={created.scopes} /> : null}
 
       {canManage ? (
         <Panel title="Create a key">
@@ -145,5 +148,14 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
         Anything using this key stops working right away. This cannot be undone.
       </ConfirmDialog>
     </div>
+  );
+}
+
+function TryIt({ keyValue, scopes }: { keyValue: string; scopes: SnippetScope[] }) {
+  const sn = firstCallSnippet(typeof window === "undefined" ? "" : window.location.origin, keyValue, scopes);
+  return (
+    <Panel title={sn.title} description={sn.note} actions={<CopyButton value={sn.code} label="Copy command" />}>
+      <pre data-testid="first-call-snippet" className="relative max-w-full overflow-x-auto rounded-md border border-border bg-surface-sunken p-3 caption-2 text-text"><code>{sn.code}</code></pre>
+    </Panel>
   );
 }

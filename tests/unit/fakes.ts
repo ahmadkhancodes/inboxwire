@@ -34,7 +34,7 @@ export function fakeStripe(nowSec = () => 1_800_000_000) {
 
   const stripe = {
     prices: {
-      list: async (p: { lookup_keys: string[] }) => ({ data: prices.filter((x) => p.lookup_keys.includes(x.lookup_key)) }),
+      list: async (p: { lookup_keys: string[] }) => { calls.push({ method: "prices.list", args: p }); return { data: prices.filter((x) => p.lookup_keys.includes(x.lookup_key)) }; },
     },
     customers: {
       create: async (p: { metadata: Record<string, string>; email?: string }) => {
@@ -71,7 +71,7 @@ export function fakeStripe(nowSec = () => 1_800_000_000) {
       },
     },
     billingPortal: {
-      sessions: { create: async (p: { customer: string }) => ({ url: `https://billing.stripe.test/${p.customer}` }) },
+      sessions: { create: async (p: { customer: string }) => { calls.push({ method: "billingPortal.sessions.create", args: p }); return { url: `https://billing.stripe.test/${p.customer}` }; } },
     },
     webhooks: {
       constructEventAsync: async (body: string, sig: string) => {

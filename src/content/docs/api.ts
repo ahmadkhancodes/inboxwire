@@ -9,11 +9,11 @@ export const api: DocPage = {
     {
       heading: "Base URL and authentication",
       body: [
-        `All requests go to ${p.url}/api/v1 over HTTPS and need an x-api-key header. Bodies and responses are JSON.`,
+        `All requests go to ${p.url}/v1 over HTTPS (/api/v1 is the same API) and need an API key, sent as Authorization: Bearer <key> or in the x-api-key header. Bodies and responses are JSON. The full endpoint list is in the API reference at /docs/api.`,
       ],
     },
     {
-      heading: "GET /api/v1/me",
+      heading: "GET /v1/me",
       body: ["Returns the organization the API key belongs to. Use it to check that a key works."],
       code: {
         lang: "json",
@@ -39,7 +39,7 @@ export const api: DocPage = {
     {
       heading: "Account export and deletion",
       body: [
-        "GET /api/account/export returns a JSON copy of your account data. DELETE /api/account permanently deletes your account and organization. Both require a signed in session and are also available in Settings, then Account.",
+        "GET /api/account/export returns a JSON copy of your account data. DELETE /api/account permanently deletes your account and organization. Both require a signed in session and are also available in the dashboard under Profile.",
       ],
     },
   ],

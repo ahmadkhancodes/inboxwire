@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { homeConnectCurl } from "@/lib/snippets";
 import Link from "next/link";
 import { Section } from "@/components/ui/layout";
 import { Reveal } from "@/components/ui/reveal";
@@ -24,11 +25,7 @@ const problems: ProblemItem[] = [
   { pain: "Google's yearly security assessment surprised us after launch.", detail: "Gmail for external users needs CASA for your own app. We give you the evidence for our part for free, and tell you up front which paths need no assessment at all." },
 ];
 
-const curl = `curl -X POST https://${product.host}/v1/connect-links \\
-  -H "Authorization: Bearer $INBOXWIRE_KEY" \\
-  -d '{"account":"cust_4821","redirect":"https://app.example/done"}'
-
-# 201 { "url": "https://${product.host}/connect/ltk_9f2c…", "expiresIn": 86400 }`;
+const curl = homeConnectCurl(`https://${product.host}`);
 
 function Code({ children }: { children: string }) {
   return (

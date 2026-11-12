@@ -9,13 +9,13 @@ export const webhooks: DocPage = {
     {
       heading: "Overview",
       body: [
-        "Add an endpoint URL in Settings, then Webhooks. We send an HTTP POST with a JSON body each time a subscribed event happens. Each endpoint has its own signing secret, shown once when you create it.",
+        "Add an endpoint URL under Webhooks in the dashboard (or POST /v1/webhooks). We send an HTTP POST with a JSON body each time a subscribed event happens. Each endpoint has its own signing secret, shown once when you create it.",
       ],
     },
     {
       heading: "Headers",
       body: [
-        "Every delivery carries three headers. x-webhook-id is a unique ID for the event, so you can deduplicate. x-webhook-event is the event name. x-webhook-signature proves the request came from us.",
+        "Every delivery carries these headers. x-webhook-id is a unique ID for the event, so you can deduplicate. x-webhook-event is the event name. Inboxwire-Signature (also sent as x-webhook-signature, same value) proves the request came from us.",
         "The signature has the form t=<unix>,v1=<hex>, where t is the Unix time we signed and v1 is the hex encoded HMAC SHA256 of the string t, a dot, then the raw request body, using the endpoint secret as the key.",
       ],
     },
