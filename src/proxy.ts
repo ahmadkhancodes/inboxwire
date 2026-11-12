@@ -8,10 +8,13 @@ import type { NextRequest } from "next/server";
 export function proxy(request: NextRequest) {
   const hasSession = request.cookies.getAll().some((c) => c.name.endsWith(".session_token"));
   if (hasSession) return NextResponse.next();
-  // A router prefetch without a session (e.g. still in flight right after sign-out) gets an empty answer instead of
-  // a redirect: redirecting it fetches /sign-in in the background, which the CSP's upgrade-insecure-requests breaks
-  // on plain-http hosts. A real navigation still redirects below.
-  if (request.headers.get("next-router-prefetch")) return new NextResponse(null, { status: 204 });
+  // A background fetch without a session (a router prefetch still in flight right after sign-out, or a client navigation after the
+  // session expired) gets an empty 204 instead of a redirect: following the redirect fetches /sign-in in the background, which the
+  // CSP's upgrade-insecure-requests breaks on plain-http hosts. A 204 is not a valid flight payload, so a real client navigation
+  // falls back to a full page load, which redirects below. Next 16 strips `rsc` and `next-router-prefetch` before the proxy runs,
+  // so the browser's own `Sec-Fetch-Dest: empty` (fetch/XHR, never a document navigation) is the signal that survives.
+  const h = request.headers;
+  if (h.get("sec-fetch-dest") === "empty" || h.get("next-router-prefetch") || h.get("next-router-segment-prefetch")) return new NextResponse(null, { status: 204 });
   const url = request.nextUrl.clone();
   const next = request.nextUrl.pathname + request.nextUrl.search;
   url.pathname = "/sign-in";
