@@ -6,12 +6,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { product } from "@/config/product";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
+import { useSignedIn } from "@/lib/auth/use-signed-in";
+import { APP_HOME, APP_LABEL } from "@/lib/marketing-session";
 
 const STAGGER_MS = 60;
 
 /** Ruled top bar, full width, square. Mobile: full-height panel, staggered links (60ms, 24px rise, <= 400ms total). */
 export function SiteHeader() {
   const pathname = usePathname();
+  const signedIn = useSignedIn();
   // The menu counts as open only on the page it was opened on, so navigating closes it without an effect.
   const [openFor, setOpenFor] = useState<string | null>(null);
   const open = openFor === pathname;
@@ -69,8 +72,12 @@ export function SiteHeader() {
 
   const panelItems = [
     ...product.nav.map((n) => ({ ...n, kind: "link" as const })),
-    { href: "/sign-in", label: "Sign in", kind: "link" as const },
-    { href: "/sign-in", label: "Start free", kind: "cta" as const },
+    ...(signedIn
+      ? [{ href: APP_HOME, label: APP_LABEL, kind: "cta" as const }]
+      : [
+          { href: "/sign-in", label: "Sign in", kind: "link" as const },
+          { href: "/sign-in", label: "Start free", kind: "cta" as const },
+        ]),
   ];
 
   return (
@@ -86,9 +93,16 @@ export function SiteHeader() {
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-1">
-          <Link href="/sign-in" className={cn(buttonClass("tertiary", "md"), "max-md:hidden")}>Sign in</Link>
-          <Link href="/sign-in" className={cn(buttonClass("primary", "md"), "max-md:hidden")}>Start free</Link>
+        {/* min width = the signed-out pair, so the nav does not move when the label swaps */}
+        <div className="flex items-center justify-end gap-1 md:min-w-[13.5rem]">
+          {signedIn ? (
+            <Link href={APP_HOME} className={cn(buttonClass("primary", "md"), "max-md:hidden")}>{APP_LABEL}</Link>
+          ) : (
+            <>
+              <Link href="/sign-in" className={cn(buttonClass("tertiary", "md"), "max-md:hidden")}>Sign in</Link>
+              <Link href="/sign-in" className={cn(buttonClass("primary", "md"), "max-md:hidden")}>Start free</Link>
+            </>
+          )}
           <button
             ref={toggleRef}
             type="button"
