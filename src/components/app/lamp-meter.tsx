@@ -1,13 +1,14 @@
 import { cn } from "@/components/ui/cn";
 import type { MailboxUsage } from "@/lib/billing/mailboxes";
+import type { UsageLevel } from "@/lib/billing/usage";
 import { fmt } from "./labels";
 
 /** Mailboxes against the plan as a row of ten lamps (one lamp = 10% of the allowance). Level is also written out and shown by shape, never by colour alone. */
-export function LampMeter({ usage }: { usage: Pick<MailboxUsage, "used" | "included" | "extra" | "mode" | "extraPriceCents" | "estimatedExtraCents"> & { level: "ok" | "near" | "over" } }) {
+export function LampMeter({ usage }: { usage: Pick<MailboxUsage, "used" | "included" | "extra" | "mode" | "extraPriceCents" | "estimatedExtraCents"> & { level: UsageLevel } }) {
   const unlimited = usage.mode === "unlimited";
   const ratio = unlimited || usage.included <= 0 ? 0 : Math.min(1, usage.used / usage.included);
   const lit = unlimited ? (usage.used > 0 ? 1 : 0) : Math.ceil(ratio * 10 - 1e-9);
-  const word = unlimited ? "no limit" : usage.level === "over" ? "over the allowance" : usage.level === "near" ? "near the allowance" : "within the allowance";
+  const word = unlimited ? "no limit" : usage.level === "over" ? "over the allowance" : usage.level === "at" ? "at the allowance" : usage.level === "near" ? "near the allowance" : "within the allowance";
   const money = (c: number) => `$${(c / 100).toFixed(2)}`;
   return (
     <div className="flex flex-col gap-3">
@@ -36,7 +37,7 @@ export function LampMeter({ usage }: { usage: Pick<MailboxUsage, "used" | "inclu
         {unlimited ? "Self-host has no mailbox limit." : `${word.charAt(0).toUpperCase()}${word.slice(1)}.`}
         {usage.mode === "metered" && usage.extra > 0 ? ` ${usage.extra} extra at ${money(usage.extraPriceCents)} each: ${money(usage.estimatedExtraCents)} a month.` : ""}
         {usage.mode === "metered" && usage.extra === 0 ? ` Each mailbox over ${usage.included} costs ${money(usage.extraPriceCents)} a month.` : ""}
-        {usage.mode === "hard_cap" && usage.level === "over" ? " New connections are refused until you upgrade or remove a mailbox." : ""}
+        {usage.mode === "hard_cap" && (usage.level === "over" || usage.level === "at") ? " New connections are refused until you upgrade or remove a mailbox." : ""}
       </p>
     </div>
   );

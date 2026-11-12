@@ -28,7 +28,7 @@ describe("mailbox metering", () => {
     await addAccounts(db, "org_2", 5);
     expect((await mailboxUsage(db, "org_1", NOW)).used).toBe(3);
     const [m] = await currentUsage(db, "org_1", ["mailboxes"], NOW);
-    expect(m).toMatchObject({ meter: "mailboxes", used: 3, limit: 3, level: "over" });
+    expect(m).toMatchObject({ meter: "mailboxes", used: 3, limit: 3, level: "at" });
   });
 
   it("Developer is a hard cap: the 4th mailbox is refused with 402 mailbox_limit", async () => {
@@ -52,10 +52,11 @@ describe("mailbox metering", () => {
     expect(mailboxUsageFor(growth, 85).state.level).toBe("near");
   });
 
-  it("warns at 80% and flags over at 100%", () => {
+  it("warns at 80%, calls 100% at the limit, flags over only above it", () => {
     const free = product.plans[0]!;
     expect(mailboxUsageFor(free, 2).state.level).toBe("ok");
-    expect(mailboxUsageFor(free, 3).state.level).toBe("over");
+    expect(mailboxUsageFor(free, 3).state.level).toBe("at");
+    expect(mailboxUsageFor(free, 4).state.level).toBe("over");
     expect(mailboxUsageFor(product.plans.find((p) => p.id === "starter")!, 20).state.level).toBe("near");
   });
 

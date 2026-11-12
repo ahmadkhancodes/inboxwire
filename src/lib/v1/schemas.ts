@@ -80,7 +80,7 @@ export const UsageSchema = z.object({
   mailboxes: z.object({
     used: z.number().int(), included: z.number().int().describe("Mailboxes in the plan allowance"), extra: z.number().int().describe("Mailboxes above the allowance, billed per extra mailbox"),
     mode: z.enum(["hard_cap", "metered", "unlimited"]).describe("hard_cap: connecting past the limit returns 402; metered: extras are billed; unlimited: no limit"),
-    extraPriceCents: z.number().int(), estimatedExtraCents: z.number().int(), level: z.enum(["ok", "near", "over"]), canAdd: z.boolean(),
+    extraPriceCents: z.number().int(), estimatedExtraCents: z.number().int(), level: z.enum(["ok", "near", "at", "over"]), canAdd: z.boolean(),
   }),
   environments: z.object({ used: z.number().int(), limit: z.number().int() }),
 }).meta({ id: "Usage" });
