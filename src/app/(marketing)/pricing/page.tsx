@@ -3,6 +3,7 @@ import { Section } from "@/components/ui/layout";
 import { PricingTable } from "@/components/marketing/pricing-table";
 import { MailboxSlider } from "@/components/marketing/mailbox-slider";
 import { Faq } from "@/components/marketing/faq";
+import { PageIntro } from "@/components/marketing/page-intro";
 import { ogImages, twitterImages } from "@/lib/seo";
 import { product } from "@/config/product";
 
@@ -29,12 +30,17 @@ const billingFaq = [
 export default function PricingPage() {
   return (
     <>
-      <Section labelledBy="pricing-title">
-        <h1 className="sr-only">{title}</h1>
-        <PricingTable title="Same core features. About half the price." />
+      <PageIntro
+        fields={[["Re", "Pricing, read 3 Nov 2026"]]}
+        title="Same core features. About half the price."
+        lead="Free for 3 mailboxes. Self-host for $708 a year with unlimited mailboxes, or let us run it from $24.99 a month. Your price is locked for 24 months."
+      />
+      <Section ruled={false} size="sm" labelledBy="pricing-title">
+        <h2 id="pricing-title" className="sr-only">Plans</h2>
+        <PricingTable />
       </Section>
-      <Section id="calculator" tone="raised" labelledBy="slider-title">
-        <h2 id="slider-title" className="heading-4 md:heading-2 mb-8 text-text md:mb-12">What your mailboxes cost</h2>
+      <Section id="calculator" field="Calculator" tone="sunken" labelledBy="slider-title">
+        <h2 id="slider-title" className="heading-4 md:heading-3 mb-8 text-text md:mb-12">What your mailboxes cost</h2>
         <MailboxSlider />
       </Section>
       <Faq title="Billing questions" items={billingFaq} />

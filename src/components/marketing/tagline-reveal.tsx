@@ -35,15 +35,17 @@ export function TaglineReveal({ text, label }: { text: string; label?: string })
   }, [words.length]);
 
   return (
-    <Section>
-      {label ? <p className="caption-3 mb-6 text-text-subtle">{label}</p> : null}
-      <p ref={ref} className="heading-4 md:heading-1 max-w-5xl text-text">
-        {words.map((w, i) => (
-          <span key={i} className="kit-word" data-on={i < active}>
-            {w}{" "}
-          </span>
-        ))}
-      </p>
+    <Section tone="inverse" size="lg">
+      <div className="grid gap-x-6 gap-y-4 lg:grid-cols-12">
+        <p className="font-mono caption-5 text-text-inverse/70 lg:col-span-2 lg:pt-2">{label ?? "Data handling"}:</p>
+        <p ref={ref} className="heading-4 md:heading-2 lg:heading-1 max-w-5xl lg:col-span-10">
+          {words.map((w, i) => (
+            <span key={i} className="kit-word" data-on={i < active}>
+              {w}{" "}
+            </span>
+          ))}
+        </p>
+      </div>
     </Section>
   );
 }

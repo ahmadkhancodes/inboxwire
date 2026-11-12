@@ -1,48 +1,39 @@
 import type { ReactNode } from "react";
 import { Section } from "@/components/ui/layout";
-import { cn } from "@/components/ui/cn";
 
-export type FeatureSpan = 2 | 3 | 4 | 6;
 export interface Feature {
   title: string;
   body: ReactNode;
-  /** Columns out of 6 on desktop. Default 2. Mix spans so rows are never three equal cards. */
-  span?: FeatureSpan;
+  /** Optional real UI fragment. Only the lead item should have one. */
   visual?: ReactNode;
 }
 
-const spans: Record<FeatureSpan, string> = {
-  2: "md:col-span-2",
-  3: "md:col-span-3",
-  4: "md:col-span-4",
-  6: "md:col-span-6",
-};
-
-/** Bento grid on a 6-column track. Items with a visual put it above the copy. */
+/** A spec sheet: the lead capability with its real UI, then a ruled two column definition list. No card grid. */
 export function Features({ title, intro, items }: { title: ReactNode; intro?: ReactNode; items: Feature[] }) {
+  const [lead, ...rest] = items;
   return (
-    <Section tone="raised" labelledBy="features-title">
-      <div className="flex max-w-2xl flex-col gap-4">
+    <Section field="Spec" labelledBy="features-title" size="lg">
+      <div className="flex max-w-3xl flex-col gap-4">
         <h2 id="features-title" className="heading-4 md:heading-2 text-text">{title}</h2>
         {intro ? <p className="body-3 text-text-subtle">{intro}</p> : null}
       </div>
-      <ul className="mt-12 grid gap-4 md:mt-16 md:grid-cols-6">
-        {items.map((f) => (
-          <li
-            key={f.title}
-            className={cn(
-              "flex min-w-0 flex-col justify-between gap-6 rounded-lg border border-border bg-surface p-6 transition-colors duration-300 ease-out-kit hover:border-border-strong md:p-8",
-              spans[f.span ?? 2],
-            )}
-          >
-            {f.visual ? <div className="min-w-0 overflow-hidden rounded-md border border-border bg-surface-raised">{f.visual}</div> : null}
-            <div className="flex flex-col gap-2">
-              <h3 className="heading-6 text-text">{f.title}</h3>
-              <p className="body-3 text-text-subtle">{f.body}</p>
-            </div>
-          </li>
+      {lead ? (
+        <div className="mt-10 grid gap-6 border-t border-text pt-6 md:mt-12 lg:grid-cols-10 lg:gap-x-6">
+          <div className="flex flex-col gap-2 lg:col-span-4">
+            <h3 className="heading-5 text-text"><span className="bg-mark px-1">{lead.title}</span></h3>
+            <p className="body-3 text-text-subtle">{lead.body}</p>
+          </div>
+          {lead.visual ? <div className="min-w-0 border border-border-strong lg:col-span-6">{lead.visual}</div> : null}
+        </div>
+      ) : null}
+      <dl className="mt-8 grid border-b border-border md:grid-cols-2 md:gap-x-6">
+        {rest.map((f) => (
+          <div key={f.title} className="flex flex-col gap-1 border-t border-border py-6">
+            <dt className="title-2 text-text">{f.title}</dt>
+            <dd className="m-0 body-3 text-text-subtle">{f.body}</dd>
+          </div>
         ))}
-      </ul>
+      </dl>
     </Section>
   );
 }

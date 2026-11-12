@@ -8,7 +8,7 @@ export default async function SecurityPage() {
   const ctx = await requireOrg({ page: true });
   return (
     <>
-      <PageHeader title="Security" description="Passkeys, an authenticator app and the devices signed in to your account." />
+      <PageHeader field="Account / security" title="Security" description="Passkeys, an authenticator app and the devices signed in to your account." />
       <SecurityClient twoFactorEnabled={!!ctx.user.twoFactorEnabled} currentSessionId={ctx.sessionId} />
     </>
   );

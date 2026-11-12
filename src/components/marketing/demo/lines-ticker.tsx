@@ -18,54 +18,59 @@ const TAPE: Stamp[] = [
 
 export function Tape({ stamps = TAPE, className = "" }: { stamps?: Stamp[]; className?: string }) {
   return (
-    <ol className={`m-0 list-none bg-tape p-0 font-mono caption-5 ${className}`} aria-label="Webhook ticker">
+    <ol className={`m-0 list-none bg-tape p-0 font-mono caption-5 ${className}`} aria-label="Webhook delivery log">
       {stamps.map((s) => (
-        <li key={s.t + s.type} className="flex flex-wrap gap-x-3 border-b border-dotted border-border px-4 py-1 last:border-b-0">
-          <span className="text-text-subtle">{s.t}</span>
-          <span className="text-text">{s.type}</span>
-          <span className="text-text-subtle">{s.line}</span>
+        <li key={s.t + s.type} className="grid grid-cols-2 gap-x-3 border-b border-border px-4 py-2 last:border-b-0">
+          <span className="text-text-muted tabular-nums">{s.t}</span>
           {s.code === 200
-            ? <span className="text-success">200 ✓ {s.ms} ms</span>
-            : <span className="text-danger">{s.code} ■ retry {s.retry}</span>}
+            ? <span className="justify-self-end text-success tabular-nums">200 ✓ {s.ms} ms</span>
+            : <span className="justify-self-end text-danger">{s.code} ■ retry {s.retry}</span>}
+          <span className="text-text">{s.type}</span>
+          <span className="justify-self-end truncate text-text-subtle">{s.line}</span>
         </li>
       ))}
     </ol>
   );
 }
 
-/** Static illustration of the real Lines table + ticker: believable example data, cropped to one panel on small screens. */
+/** Static illustration of the real Lines table + delivery log: believable example data, cropped to one panel on small screens. */
 export function LinesTicker() {
   return (
     <figure className="m-0">
-      <figcaption className="sr-only">Example of the Inboxwire by BufferSol Lines table with a status lamp per mailbox and the webhook ticker below it</figcaption>
-      <div className="overflow-hidden rounded-lg border border-border bg-surface-raised shadow-[0_1px_0_rgba(22,25,28,.06),0_1px_3px_rgba(22,25,28,.08)]">
-        <div className="flex items-center justify-between gap-4 border-b border-border bg-surface-sunken px-4 py-2 font-mono caption-4 text-text-subtle">
-          <span>Lines · northwind-crm / production</span>
-          <span>4 of 4 watched</span>
+      <figcaption className="sr-only">Example of the Inboxwire by BufferSol Lines table with a status lamp per mailbox and the webhook delivery log beside it</figcaption>
+      <div className="border border-border-strong bg-surface-raised">
+        <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-2 font-mono caption-5 text-text-subtle">
+          <span><span className="text-text">northwind-crm</span> / production / lines</span>
+          <span className="hidden sm:inline">4 lines · 3 healthy · 1 needs sign-in</span>
         </div>
-        <table className="w-full table-fixed border-collapse text-left">
-          <thead>
-            <tr className="border-b border-border font-mono caption-4 text-text-subtle">
-              <th scope="col" className="w-3/5 px-4 py-2 font-medium md:w-2/5">Line</th>
-              <th scope="col" className="hidden px-4 py-2 font-medium md:table-cell">Provider</th>
-              <th scope="col" className="px-4 py-2 font-medium">State</th>
-              <th scope="col" className="hidden px-4 py-2 font-medium md:table-cell">Mode</th>
-              <th scope="col" className="hidden px-4 py-2 font-medium md:table-cell">Last event</th>
-            </tr>
-          </thead>
-          <tbody>
-            {LINES.map((l) => (
-              <tr key={l.id} className="border-b border-border last:border-b-0">
-                <td className="truncate px-4 py-2 font-mono caption-5 text-text">{l.id}</td>
-                <td className="hidden px-4 py-2 body-6 text-text md:table-cell">{l.provider}</td>
-                <td className="px-4 py-2"><StatusLamp state={l.state} /></td>
-                <td className="hidden px-4 py-2 font-mono caption-5 text-text-subtle md:table-cell">{l.mode}</td>
-                <td className="hidden px-4 py-2 font-mono caption-5 text-text-subtle md:table-cell">{l.last}</td>
+        <div className="grid lg:grid-cols-12">
+          <table className="w-full table-fixed border-collapse text-left lg:col-span-8">
+            <thead>
+              <tr className="border-b border-border bg-surface-sunken font-mono caption-5 text-text-muted">
+                <th scope="col" className="w-3/5 px-4 py-2 font-normal md:w-2/5">Line</th>
+                <th scope="col" className="hidden px-4 py-2 font-normal md:table-cell">Provider</th>
+                <th scope="col" className="px-4 py-2 font-normal">State</th>
+                <th scope="col" className="hidden px-4 py-2 font-normal md:table-cell">Mode</th>
+                <th scope="col" className="hidden px-4 py-2 font-normal md:table-cell">Last event</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        <Tape className="border-t border-dashed border-border-strong" />
+            </thead>
+            <tbody>
+              {LINES.map((l) => (
+                <tr key={l.id} className="border-b border-border last:border-b-0">
+                  <td className="truncate px-4 py-3 font-mono caption-5 text-text">{l.id}</td>
+                  <td className="hidden px-4 py-3 body-6 text-text md:table-cell">{l.provider}</td>
+                  <td className="px-4 py-3"><StatusLamp state={l.state} /></td>
+                  <td className="hidden px-4 py-3 font-mono caption-5 text-text-subtle md:table-cell">{l.mode}</td>
+                  <td className="hidden px-4 py-3 font-mono caption-5 text-text-subtle md:table-cell">{l.last}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="border-t border-border lg:col-span-4 lg:border-l lg:border-t-0">
+            <p className="border-b border-border bg-surface-sunken px-4 py-2 font-mono caption-5 text-text-muted">Webhook deliveries</p>
+            <Tape />
+          </div>
+        </div>
       </div>
     </figure>
   );

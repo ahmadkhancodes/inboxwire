@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("landing -> pricing -> sign-in renders", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText("one API");
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("your users’ mailboxes");
   await page.getByRole("link", { name: "Pricing" }).first().click();
   await expect(page).toHaveURL(/\/pricing$/);
   await expect(page.getByRole("heading", { name: "Same core features. About half the price." })).toBeVisible();

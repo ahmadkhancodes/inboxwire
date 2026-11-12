@@ -2,16 +2,18 @@ import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "./cn";
 
-// Buttons (playbook §7 states): primary, secondary, tertiary, danger. Hover/active/focus/disabled/loading.
-type Variant = "primary" | "secondary" | "tertiary" | "danger";
+// Buttons (playbook §7 states): primary (ink), secondary (outline), tertiary, danger, mark (on ink only). Hover/active/focus/disabled/loading.
+type Variant = "primary" | "secondary" | "tertiary" | "danger" | "mark";
 type Size = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-md whitespace-nowrap select-none transition-[background-color,color,border-color,opacity,transform] duration-300 ease-out-kit active:scale-[0.98] disabled:opacity-50 aria-busy:cursor-progress focus-visible:focus-ring";
+  "inline-flex items-center justify-center gap-2 rounded-sm whitespace-nowrap select-none transition-[background-color,color,border-color,opacity,transform] duration-300 ease-out-kit active:scale-[0.98] disabled:opacity-50 aria-busy:cursor-progress focus-visible:focus-ring";
 const variants: Record<Variant, string> = {
   primary: "bg-action text-action-text hover:bg-action-hover",
-  secondary: "border border-border-strong bg-surface text-text hover:bg-surface-raised",
-  tertiary: "text-text-subtle hover:text-text hover:bg-surface-raised",
+  secondary: "border border-border-strong bg-surface text-text hover:border-text",
+  tertiary: "text-text-subtle hover:text-text hover:bg-surface-sunken",
+  /** Highlighter button, only on the ink band (final CTA) where an ink button would vanish. */
+  mark: "bg-mark text-text hover:bg-white",
   danger: "bg-danger text-white hover:opacity-90",
 };
 const sizes: Record<Size, string> = {

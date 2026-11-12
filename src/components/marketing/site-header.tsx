@@ -9,7 +9,7 @@ import { cn } from "@/components/ui/cn";
 
 const STAGGER_MS = 60;
 
-/** Floating bar, off the top edge. Mobile: full-height panel, staggered links (60ms, 24px rise, <= 400ms total). */
+/** Ruled top bar, full width, square. Mobile: full-height panel, staggered links (60ms, 24px rise, <= 400ms total). */
 export function SiteHeader() {
   const pathname = usePathname();
   // The menu counts as open only on the page it was opened on, so navigating closes it without an effect.
@@ -63,8 +63,8 @@ export function SiteHeader() {
   const isCurrent = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
   const linkClass = (href: string) =>
     cn(
-      "inline-flex min-h-11 items-center rounded-md px-3 button-sm transition-colors duration-300 ease-out-kit hover:bg-surface-raised hover:text-text focus-visible:focus-ring",
-      isCurrent(href) ? "text-text" : "text-text-subtle",
+      "relative inline-flex h-16 items-center px-3 body-5 transition-colors duration-300 ease-out-kit hover:text-text focus-visible:focus-ring",
+      isCurrent(href) ? "text-text after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:bg-text" : "text-text-subtle",
     );
 
   const panelItems = [
@@ -74,9 +74,9 @@ export function SiteHeader() {
   ];
 
   return (
-    <header className="fixed inset-x-0 top-3 z-50 px-4 sm:px-6">
-      <div className="relative z-50 mx-auto flex w-full max-w-7xl items-center justify-between gap-4 rounded-lg border border-border bg-surface/80 py-1 pl-4 pr-1 backdrop-blur-md">
-        <Link href="/" className="inline-flex min-h-11 items-center rounded-md title-2 text-text focus-visible:focus-ring" aria-label={`${product.fullName} home`}>
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-border bg-surface">
+      <div className="relative z-50 mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="inline-flex min-h-11 items-center text-text focus-visible:focus-ring" aria-label={`${product.fullName} home`}>
           <Wordmark />
         </Link>
         <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
@@ -114,7 +114,7 @@ export function SiteHeader() {
         aria-label="Menu"
         inert={!open}
         className={cn(
-          "fixed inset-0 z-40 flex flex-col bg-surface px-4 pt-24 transition-[opacity,visibility] duration-200 ease-out-kit md:hidden",
+          "fixed inset-0 z-40 flex flex-col bg-surface px-4 pt-20 transition-[opacity,visibility] duration-200 ease-out-kit md:hidden",
           open ? "visible opacity-100" : "invisible opacity-0",
         )}
       >

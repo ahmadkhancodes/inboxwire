@@ -33,7 +33,7 @@ export function DeliveriesClient({ canReplay }: { canReplay: boolean }) {
   if (list.loading && !list.data) return <div aria-busy="true" aria-label="Loading deliveries" className="flex flex-col gap-3"><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" /></div>;
   if (list.error && !list.data) return <ErrorState title="Could not load deliveries" body={list.error} action={<Button variant="secondary" onClick={list.reload}>Try again</Button>} />;
   const rows = list.data ?? [];
-  if (rows.length === 0) return <EmptyState title="No deliveries yet" body="Deliveries are logged here once an endpoint is subscribed and an event happens." action={<Link href="/app/settings/webhooks" className={buttonClass("secondary", "md")}>Add a webhook endpoint</Link>} />;
+  if (rows.length === 0) return <EmptyState title="No deliveries yet" example={<><span className="block truncate">messageNew → https://api.northwind.example/hooks</span><span className="block truncate">200 · 1 attempt · 84 ms</span></>} body="Deliveries are logged here once an endpoint is subscribed and an event happens." action={<Link href="/app/settings/webhooks" className={buttonClass("secondary", "md")}>Add a webhook endpoint</Link>} />;
   const failed = rows.filter((d) => d.status === "failed" && !d.replayedAt).length;
   return (
     <div className="flex flex-col gap-4">

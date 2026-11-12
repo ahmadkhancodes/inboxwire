@@ -17,7 +17,7 @@ export function LinesClient({ initial }: { initial: LiveSnapshot }) {
   if (snap.lines.length === 0) {
     return (
       <EmptyState
-        title="No lines yet"
+        title="No lines yet" example={<><span className="block truncate">ops@northwind-crm.example · Google · ● live</span><span className="block truncate">intake@kestrel-ats.example · IMAP · ◐ syncing</span></>}
         body={<>A line appears when a user finishes your connect link. Create one with <code className="font-mono caption-5">POST /v1/connect-links</code>, send the user to the URL, and the lamp lights here.</>}
         action={<Link href="/docs/api" className={buttonClass("secondary", "md")}>Read the connect docs</Link>}
       />
@@ -30,6 +30,20 @@ export function LinesClient({ initial }: { initial: LiveSnapshot }) {
         <p className="caption-2 text-text-subtle tabular-nums">{snap.lines.filter((l) => l.lamp === "live").length} of {snap.lines.length} live</p>
       </div>
       {error ? <ErrorState title="Updates paused" body={`${error} We keep trying.`} /> : null}
+      <ul aria-label="Connected mailboxes" className="m-0 list-none border-y border-border p-0 md:hidden">
+        {snap.lines.map((l) => (
+          <li key={l.id} className="border-t border-border first:border-t-0">
+            <Link href={`/app/lines/${l.id}`} className="flex min-h-11 flex-col gap-1 py-3 transition-colors duration-200 hover:bg-surface-sunken focus-visible:focus-ring">
+              <span className="flex items-center justify-between gap-3">
+                <span className="min-w-0 truncate font-mono caption-5 text-text">{l.email}</span>
+                <StatusLamp state={l.lamp} label={l.lampLabel} className="shrink-0" />
+              </span>
+              <span className="font-mono caption-5 text-text-muted">{PROVIDER[l.provider]} · {l.mode} · {l.lastEvent ? `${l.lastEvent.type} ${l.lastEvent.at.slice(11, 19)} UTC` : "no events yet"}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden md:block">
       <DataTable
         caption="Connected mailboxes"
         columns={[{ key: "line", label: "Line" }, { key: "provider", label: "Provider" }, { key: "state", label: "State" }, { key: "mode", label: "Mode" }, { key: "last", label: "Last event" }, { key: "env", label: "Environment" }]}
@@ -54,6 +68,7 @@ export function LinesClient({ initial }: { initial: LiveSnapshot }) {
           </tr>
         ))}
       </DataTable>
+      </div>
     </div>
   );
 }

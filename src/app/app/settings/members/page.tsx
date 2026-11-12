@@ -9,7 +9,7 @@ export default async function MembersPage() {
   const ctx = await requireOrg({ page: true });
   return (
     <>
-      <PageHeader title="Members" description={`People who can access ${ctx.org.name}, and what they can do.`} />
+      <PageHeader field="Account / members" title="Members" description={`People who can access ${ctx.org.name}, and what they can do.`} />
       <MembersClient
         orgId={ctx.org.id}
         meId={ctx.user.id}

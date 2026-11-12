@@ -11,7 +11,7 @@ export default async function TickerPage() {
   const ctx = await requireOrg({ page: true });
   return (
     <>
-      <PageHeader title="Ticker" description="Every webhook event as it is queued, newest on top." />
+      <PageHeader field="Mail / ticker" title="Ticker" description="Every webhook event as it is queued, newest on top." />
       <TickerClient initial={await snapshot(await getDb(), ctx.org.id)} />
     </>
   );

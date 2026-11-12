@@ -18,7 +18,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: S
   return (
     <>
       <div className="flex flex-col gap-2">
-        <h1 className="heading-5 text-text">{adding ? "Create another organization" : "Name your organization"}</h1>
+        <h1 className="heading-4 text-text">{adding ? "Create another organization" : "Name your organization"}</h1>
         <p className="body-6 text-text-subtle">
           An organization holds your members, plan and data. You can invite teammates and rename it later.
         </p>

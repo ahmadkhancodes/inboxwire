@@ -12,7 +12,7 @@ export default async function LinesPage() {
   const initial = await snapshot(await getDb(), ctx.org.id);
   return (
     <>
-      <PageHeader title="Lines" description="Every connected mailbox is a line. The lamp shows its state, and it changes here within seconds." />
+      <PageHeader field="Mail / lines" title="Lines" description="Every connected mailbox is a line. The lamp shows its state, and it changes here within seconds." />
       <LinesClient initial={initial} />
     </>
   );

@@ -8,7 +8,7 @@ export default async function OutboxPage() {
   await requireOrg({ page: true });
   return (
     <>
-      <PageHeader title="Outbox" description="Messages queued with POST /v1/accounts/{id}/messages/send. Failed sends retry up to five times. Items are kept for 7 days." />
+      <PageHeader field="Mail / outbox" title="Outbox" description="Messages queued with POST /v1/accounts/{id}/messages/send. Failed sends retry up to five times. Items are kept for 7 days." />
       <OutboxClient />
     </>
   );

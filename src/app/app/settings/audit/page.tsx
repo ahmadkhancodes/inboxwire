@@ -18,7 +18,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   if (!can(ctx.role, "audit", "read")) {
     return (
       <>
-        <PageHeader title="Audit log" />
+        <PageHeader field="Account / audit log" title="Audit log" />
         <Notice title="Owners and admins only">The audit log records who changed what. Ask an owner or admin if you need to see it.</Notice>
       </>
     );
@@ -33,7 +33,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   const last = shown[shown.length - 1];
   return (
     <>
-      <PageHeader title="Audit log" description="An append-only record of sensitive actions in this organization, newest first." />
+      <PageHeader field="Account / audit log" title="Audit log" description="An append-only record of sensitive actions in this organization, newest first." />
       {shown.length === 0 ? (
         <EmptyState
           title={before ? "Nothing older than this" : "No activity recorded yet"}

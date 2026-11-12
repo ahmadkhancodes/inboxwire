@@ -1,8 +1,7 @@
 "use client";
 import { hardNavigate } from "./api";
-import {
-  Broadcast, ClipboardText, CreditCard, ListChecks, Receipt, Tray, Gauge, Key, List, PlugsConnected, ShieldCheck, SignOut, SquaresFour, User, UsersThree, WebhooksLogo, X,
-} from "@phosphor-icons/react";
+import { List, SignOut, X } from "@phosphor-icons/react";
+import { Wordmark } from "@/components/brand/wordmark";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
@@ -10,88 +9,81 @@ import { cn } from "@/components/ui/cn";
 import { authClient } from "@/lib/auth/client";
 import { OrgSwitcher } from "./org-switcher";
 
-type IconType = typeof User;
-interface NavItem { href: string; label: string; icon: IconType }
+interface NavItem { href: string; label: string }
+interface NavGroup { label: string; items: NavItem[] }
 
-const MAIN: NavItem[] = [
-  { href: "/app", label: "Overview", icon: SquaresFour },
-  { href: "/app/lines", label: "Lines", icon: Broadcast },
-  { href: "/app/ticker", label: "Ticker", icon: Receipt },
-  { href: "/app/deliveries", label: "Deliveries", icon: ListChecks },
-  { href: "/app/outbox", label: "Outbox", icon: Tray },
-  { href: "/app/keys", label: "Keys", icon: Key },
-  { href: "/app/oauth-clients", label: "OAuth clients", icon: PlugsConnected },
-  { href: "/app/billing", label: "Billing", icon: CreditCard },
-];
-const SETTINGS: NavItem[] = [
-  { href: "/app/settings/profile", label: "Profile", icon: User },
-  { href: "/app/settings/security", label: "Security", icon: ShieldCheck },
-  { href: "/app/settings/members", label: "Members", icon: UsersThree },
-  { href: "/app/settings/webhooks", label: "Webhooks", icon: WebhooksLogo },
-  { href: "/app/settings/audit", label: "Audit log", icon: ClipboardText },
+/** Text-only index, grouped by job (docs/design-brief.md §7). No icon per item. */
+const GROUPS: NavGroup[] = [
+  { label: "Mail", items: [
+    { href: "/app", label: "Overview" },
+    { href: "/app/lines", label: "Lines" },
+    { href: "/app/ticker", label: "Ticker" },
+    { href: "/app/deliveries", label: "Deliveries" },
+    { href: "/app/outbox", label: "Outbox" },
+  ] },
+  { label: "Developers", items: [
+    { href: "/app/keys", label: "Keys" },
+    { href: "/app/settings/webhooks", label: "Webhooks" },
+    { href: "/app/oauth-clients", label: "OAuth clients" },
+  ] },
+  { label: "Account", items: [
+    { href: "/app/billing", label: "Billing" },
+    { href: "/app/settings/members", label: "Members" },
+    { href: "/app/settings/security", label: "Security" },
+    { href: "/app/settings/profile", label: "Profile" },
+    { href: "/app/settings/audit", label: "Audit log" },
+  ] },
 ];
 
 function NavLink({ item, pathname, onNavigate }: { item: NavItem; pathname: string; onNavigate?: () => void }) {
   const active = item.href === "/app" ? pathname === "/app" : pathname === item.href || pathname.startsWith(`${item.href}/`);
-  const Icon = item.icon;
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex min-h-11 items-center gap-3 rounded-md px-3 py-2 body-5 transition-colors duration-300 focus-visible:focus-ring",
-        active ? "bg-surface-sunken text-text" : "text-text-subtle hover:bg-surface-raised hover:text-text",
+        "relative flex min-h-11 items-center px-4 body-5 transition-colors duration-300 focus-visible:focus-ring",
+        active
+          ? "bg-surface text-text before:absolute before:inset-y-2 before:left-0 before:w-1 before:bg-text"
+          : "text-text-subtle hover:bg-surface hover:text-text",
       )}
     >
-      <Icon size={20} weight="regular" aria-hidden />
       {item.label}
     </Link>
   );
 }
 
-function SidebarBody({ org, user, isAdmin, pathname, onNavigate }: { org: { id: string; name: string }; user: { name: string; email: string }; isAdmin: boolean; pathname: string; onNavigate?: () => void }) {
+function NavIndex({ isAdmin, pathname, onNavigate }: { isAdmin: boolean; pathname: string; onNavigate?: () => void }) {
+  const groups = isAdmin ? [...GROUPS, { label: "Founder", items: [{ href: "/admin", label: "Admin" }] }] : GROUPS;
+  return (
+    <nav aria-label="Main" className="flex flex-col gap-6">
+      {groups.map((g) => (
+        <div key={g.label} className="flex flex-col">
+          <p className="px-4 pb-1 font-mono caption-5 text-text-muted">{g.label}</p>
+          {g.items.map((i) => <NavLink key={i.href} item={i} pathname={pathname} onNavigate={onNavigate} />)}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+function SignOutButton({ className }: { className?: string }) {
   const [signingOut, setSigningOut] = useState(false);
   return (
-    <div className="flex h-full flex-col gap-6">
-      <OrgSwitcher activeId={org.id} activeName={org.name} />
-      <nav aria-label="Main" className="flex flex-1 flex-col gap-6 overflow-y-auto">
-        <div className="flex flex-col gap-1">
-          {MAIN.map((i) => <NavLink key={i.href} item={i} pathname={pathname} onNavigate={onNavigate} />)}
-        </div>
-        <div className="flex flex-col gap-1">
-          <p className="px-3 pb-1 caption-3 text-text-muted">Settings</p>
-          {SETTINGS.map((i) => <NavLink key={i.href} item={i} pathname={pathname} onNavigate={onNavigate} />)}
-        </div>
-        {isAdmin ? (
-          <div className="flex flex-col gap-1">
-            <p className="px-3 pb-1 caption-3 text-text-muted">Founder</p>
-            <NavLink item={{ href: "/admin", label: "Admin", icon: Gauge }} pathname={pathname} onNavigate={onNavigate} />
-          </div>
-        ) : null}
-      </nav>
-      <div className="flex flex-col gap-2 border-t border-border pt-4">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-col">
-            <p className="title-4 truncate text-text">{user.name || user.email}</p>
-            {user.name ? <p className="caption-5 truncate text-text-muted">{user.email}</p> : null}
-          </div>
-        </div>
-        <button
-          type="button"
-          disabled={signingOut}
-          onClick={async () => {
-            setSigningOut(true);
-            await authClient.signOut();
-            hardNavigate("/");
-          }}
-          className="flex min-h-11 items-center gap-3 rounded-md px-3 py-2 body-5 text-text-subtle transition-colors duration-300 hover:bg-surface-raised hover:text-text focus-visible:focus-ring disabled:opacity-50"
-        >
-          <SignOut size={20} weight="regular" aria-hidden />
-          {signingOut ? "Signing out" : "Sign out"}
-        </button>
-      </div>
-    </div>
+    <button
+      type="button"
+      disabled={signingOut}
+      onClick={async () => {
+        setSigningOut(true);
+        await authClient.signOut();
+        hardNavigate("/");
+      }}
+      className={cn("inline-flex min-h-11 items-center gap-2 rounded-sm px-3 body-5 text-text-subtle transition-colors duration-300 hover:bg-surface-sunken hover:text-text focus-visible:focus-ring disabled:opacity-50", className)}
+    >
+      <SignOut size={16} weight="regular" aria-hidden />
+      {signingOut ? "Signing out" : "Sign out"}
+    </button>
   );
 }
 
@@ -119,28 +111,29 @@ export function AppShell({ org, user, isAdmin, productName, banners, children }:
   }, [open]);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface lg:flex-row">
-      <aside className="sticky top-0 hidden h-dvh w-full max-w-xs shrink-0 flex-col border-r border-border bg-surface-raised p-4 lg:flex lg:w-1/4 xl:w-1/5">
-        <div className="mb-6 px-3 pt-2">
-          <Link href="/app" className="inline-flex min-h-11 items-center heading-6 text-text focus-visible:focus-ring">{productName}</Link>
+    <div className="flex min-h-dvh flex-col bg-surface">
+      <header className="sticky top-0 z-20 border-b border-border bg-surface">
+        <div className="flex h-16 items-center justify-between gap-4 px-4 lg:px-6">
+          <div className="flex min-w-0 items-center gap-4">
+            <Link href="/app" className="inline-flex min-h-11 shrink-0 items-center focus-visible:focus-ring" aria-label={`${productName} by BufferSol, overview`}><Wordmark /></Link>
+            <span aria-hidden className="hidden h-6 w-px bg-border lg:block" />
+            <div className="hidden w-[256px] lg:block"><OrgSwitcher activeId={org.id} activeName={org.name} /></div>
+          </div>
+          <div className="hidden min-w-0 items-center gap-2 lg:flex">
+            <span className="truncate font-mono caption-5 text-text-subtle" title={user.email}>{user.name || user.email}</span>
+            <SignOutButton />
+          </div>
+          <button
+            type="button"
+            aria-label="Open menu"
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+            onClick={() => setOpen(true)}
+            className="inline-flex size-11 items-center justify-center rounded-sm text-text transition-colors duration-300 hover:bg-surface-sunken focus-visible:focus-ring lg:hidden"
+          >
+            <List size={24} weight="regular" aria-hidden />
+          </button>
         </div>
-        <div className="min-h-0 flex-1">
-          <SidebarBody org={org} user={user} isAdmin={isAdmin} pathname={pathname} />
-        </div>
-      </aside>
-
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-surface px-4 py-2 lg:hidden">
-        <Link href="/app" className="inline-flex min-h-11 items-center heading-6 text-text focus-visible:focus-ring">{productName}</Link>
-        <button
-          type="button"
-          aria-label="Open menu"
-          aria-expanded={open}
-          aria-controls="mobile-menu"
-          onClick={() => setOpen(true)}
-          className="inline-flex size-11 items-center justify-center rounded-md text-text transition-colors duration-300 hover:bg-surface-raised focus-visible:focus-ring"
-        >
-          <List size={24} weight="regular" aria-hidden />
-        </button>
       </header>
 
       <div
@@ -149,30 +142,42 @@ export function AppShell({ org, user, isAdmin, productName, banners, children }:
         aria-modal="true"
         aria-label="Menu"
         hidden={!open}
-        className="fixed inset-0 z-40 flex flex-col gap-4 overflow-y-auto bg-surface p-4 lg:hidden"
+        className="fixed inset-0 z-40 flex flex-col gap-6 overflow-y-auto bg-surface-sunken pb-6 lg:hidden"
       >
-        <div className="flex items-center justify-between">
-          <span className="heading-6 text-text">{productName}</span>
+        <div className="flex h-16 items-center justify-between border-b border-border bg-surface px-4">
+          <Wordmark />
           <button
             type="button"
             aria-label="Close menu"
             onClick={() => setOpen(false)}
-            className="inline-flex size-11 items-center justify-center rounded-md text-text transition-colors duration-300 hover:bg-surface-raised focus-visible:focus-ring"
+            className="inline-flex size-11 items-center justify-center rounded-sm text-text transition-colors duration-300 hover:bg-surface-sunken focus-visible:focus-ring"
           >
             <X size={24} weight="regular" aria-hidden />
           </button>
         </div>
-        <div className="min-h-0 flex-1">
-          {open ? <SidebarBody org={org} user={user} isAdmin={isAdmin} pathname={pathname} onNavigate={() => setOpen(false)} /> : null}
-        </div>
+        {open ? (
+          <>
+            <div className="px-4"><OrgSwitcher activeId={org.id} activeName={org.name} /></div>
+            <NavIndex isAdmin={isAdmin} pathname={pathname} onNavigate={() => setOpen(false)} />
+            <div className="flex flex-col gap-1 border-t border-border px-4 pt-4">
+              <p className="truncate font-mono caption-5 text-text-subtle">{user.email}</p>
+              <SignOutButton className="-ml-3 w-fit" />
+            </div>
+          </>
+        ) : null}
       </div>
 
-      <main id="main" className="min-w-0 flex-1">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-10 lg:py-12">
-          {banners}
-          {children}
-        </div>
-      </main>
+      <div className="flex flex-1">
+        <aside className="sticky top-16 hidden h-[calc(100dvh-4rem)] w-[224px] shrink-0 overflow-y-auto border-r border-border bg-surface-sunken py-6 lg:block">
+          <NavIndex isAdmin={isAdmin} pathname={pathname} />
+        </aside>
+        <main id="main" className="min-w-0 flex-1">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+            {banners}
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

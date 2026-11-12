@@ -120,7 +120,7 @@ export function WebhooksClient({ canManage, events }: { canManage: boolean; even
         {endpoints.loading ? <Skeleton className="h-24 w-full" /> : endpoints.error ? (
           <ErrorState title="Endpoints did not load" body={endpoints.error} action={<Button onClick={endpoints.reload}>Try again</Button>} />
         ) : (endpoints.data ?? []).length === 0 ? (
-          <EmptyState title="No endpoints yet" body="Add an HTTPS URL above, then use Send test to see a signed request arrive before you rely on it." />
+          <EmptyState title="No endpoints yet" example={<><span className="block truncate">https://api.northwind.example/hooks/inboxwire</span><span className="block truncate">messageNew, messageSent · signed · enabled</span></>} body="Add an HTTPS URL above, then use Send test to see a signed request arrive before you rely on it." />
         ) : (
           <DataTable
             caption="Webhook endpoints"

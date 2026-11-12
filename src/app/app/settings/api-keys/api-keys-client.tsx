@@ -104,7 +104,7 @@ export function ApiKeysClient({ orgId, canManage }: { orgId: string; canManage: 
         {keys.loading ? <Skeleton className="h-24 w-full" /> : keys.error ? (
           <ErrorState title="Keys did not load" body={keys.error} action={<Button onClick={keys.reload}>Try again</Button>} />
         ) : (keys.data ?? []).length === 0 ? (
-          <EmptyState title="No API keys yet" body="Create a key, copy it once, and store it as an environment variable on your server. The full key is never shown again, only its first characters." />
+          <EmptyState title="No API keys yet" example={<><span className="block truncate">production-server · iw_live_4f9c… · send</span><span className="block truncate">ci-readonly · iw_test_b21e… · read</span></>} body="Create a key, copy it once, and store it as an environment variable on your server. The full key is never shown again, only its first characters." />
         ) : (
           <DataTable
             caption="API keys"
