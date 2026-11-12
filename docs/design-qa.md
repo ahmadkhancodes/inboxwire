@@ -1,6 +1,6 @@
 # Design QA scorecard (DESIGN_PLAYBOOK §9)
 
-Run 5 Nov 2026 on a production build (`npm run build && npm start`, memory driver). Screenshots: `docs/qa/2026-11-05/` (375 and 1440, light and dark; routes `/`, `/pricing`, `/docs`, `/docs/getting-started`, `/legal/privacy`, `/legal/terms`, `/compare/emailengine`, `/status`, `/casa`, `/sign-in`, 404). `scripts/screenshots.ts` also fails on horizontal overflow: none found at 375 or 1440.
+Run 5 Nov 2026 on a production build (`npm run build && npm start`, memory driver). Screenshots: `docs/qa/2026-11-05/` (375 and 1440, light; routes `/`, `/pricing`, `/docs`, `/docs/getting-started`, `/legal/privacy`, `/legal/terms`, `/compare/emailengine`, `/status`, `/casa`, `/sign-in`, 404). `scripts/screenshots.ts` also fails on horizontal overflow: none found at 375 or 1440.
 
 | # | Category | Score | Worst problem |
 |---|---|---|---|

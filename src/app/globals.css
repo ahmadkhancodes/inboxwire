@@ -55,37 +55,6 @@
   color-scheme: light;
 }
 
-:root[data-theme="dark"] {
-  --surface: #0f1211;
-  --surface-raised: #181c1b;
-  --surface-sunken: #1f2423;
-  --surface-inverse: #e7ece8;
-  --text: #e7ece8;
-  --text-subtle: #9aa59f;
-  --text-muted: #8a948e;
-  --text-inverse: #0f1211;
-  --border: #2a302e;
-  --border-strong: #3a4240;
-  --action: #f5a524;
-  --action-hover: #ffb940;
-  --action-text: #16191c;
-  --focus: #f5a524;
-  --cable: #7fb0f5;
-  --tape: #1d221f;
-  --success: #3dd68c;
-  --success-surface: #112a1d;
-  --warning: #ffb940;
-  --warning-surface: #2b2110;
-  --danger: #ff7a7a;
-  --danger-surface: #2e1616;
-  --hero-from: #e7ece8;
-  --hero-to: #9aa59f;
-  --shadow-color: 0 0% 0%;
-  color-scheme: dark;
-}
-
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
-
 @theme inline {
   --font-sans: var(--font-sans-family);
   --font-mono: var(--font-mono-family);

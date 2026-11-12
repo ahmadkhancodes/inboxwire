@@ -37,7 +37,7 @@ test("limits shown in the app agree with the pricing page; over-limit usage is e
   await expect(page.getByText(/3 mailboxes/i).first()).toBeVisible();
 });
 
-test("keyboard only: sign-in is reachable by Tab with a visible focus ring, Enter submits, theme toggle works", async ({ page }) => {
+test("keyboard only: sign-in is reachable by Tab with a visible focus ring, Enter submits", async ({ page }) => {
   await page.goto("/sign-in");
   await page.waitForLoadState("networkidle");
   const seen: string[] = [];
@@ -58,14 +58,6 @@ test("keyboard only: sign-in is reachable by Tab with a visible focus ring, Ente
   await page.keyboard.type(`kb+${Date.now()}@studio.test`);
   await page.keyboard.press("Enter");
   await expect(page.getByText(/Check your inbox/)).toBeVisible();
-  // theme toggle flips and persists across reload
-  await page.goto("/");
-  const before = await page.evaluate(() => document.documentElement.dataset.theme);
-  await page.getByRole("button", { name: /Switch to (dark|light) theme/ }).first().click();
-  const after = await page.evaluate(() => document.documentElement.dataset.theme);
-  expect(after).not.toBe(before);
-  await page.reload();
-  expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(after);
 });
 
 test("mobile 375px: no horizontal scroll and 44px tap targets on public and app pages", async ({ page }) => {
@@ -91,19 +83,17 @@ test("mobile 375px: no horizontal scroll and 44px tap targets on public and app 
   expect(small, "tap targets under 44px").toEqual([]);
 });
 
-test("dark theme: app and marketing render without errors and keep readable contrast on body text", async ({ page }) => {
+test("light only: marketing and sign-in render light with color-scheme light, no theme toggle", async ({ page }) => {
   const problems = watch(page);
-  await page.emulateMedia({ colorScheme: "dark" });
+  await page.emulateMedia({ colorScheme: "dark" }); // an OS dark preference must not change anything
   for (const p of ["/", "/pricing", "/sign-in"]) {
-    // Load twice: the very first load of /sign-in on a cold server hits the open React #418 issue (docs/QA-REPORT.md), which drops data-theme once.
     await page.goto(p);
     await page.waitForLoadState("networkidle");
-    await page.goto(p);
-    await page.waitForLoadState("networkidle");
-    expect(await page.evaluate(() => document.documentElement.dataset.theme), p).toBe("dark");
+    expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme), p).toBe("light");
     const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
     const [r, g, b] = bg.match(/\d+/g)!.map(Number);
-    expect((r + g + b) / 3, `${p} background should be dark`).toBeLessThan(90);
+    expect((r + g + b) / 3, `${p} background should be light`).toBeGreaterThan(200);
+    await expect(page.getByRole("button", { name: /theme/i })).toHaveCount(0);
   }
   expect(problems.filter((p) => !/#418/.test(p))).toEqual([]);
 });
