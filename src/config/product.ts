@@ -79,7 +79,7 @@ export const product = {
   companyUrl: "https://buffersoltech.com",
   host: "inboxwire.buffersoltech.com",
   url: process.env.NEXT_PUBLIC_APP_URL ?? "https://inboxwire.buffersoltech.com",
-  supportEmail: "contact@buffersoltech.com",
+  supportEmail: "inboxwire@buffersoltech.com",
   legalEmail: "contact@buffersoltech.com",
   mailFrom: "Inboxwire by BufferSol <no-reply@inboxwire.buffersoltech.com>",
   description:

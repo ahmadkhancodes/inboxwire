@@ -1,9 +1,9 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createMemoryDb } from "@/lib/db/memory";
 import type { Db } from "@/lib/db/types";
 import { MAX_ATTEMPTS, backoffMs, emitEvent, isSafeWebhookUrl, retryDueDeliveries, signPayload, verifySignature } from "@/lib/webhooks/outbound";
 import { sendMail, unsubscribeToken } from "@/lib/mail";
-import { consoleTransport, outbox, resendTransport } from "@/lib/mail/transports";
+import { consoleTransport, gatewayTransport, outbox, resendTransport } from "@/lib/mail/transports";
 import { magicLinkEmail } from "@/lib/mail/templates";
 
 let db: Db;
@@ -99,5 +99,41 @@ describe("mailer", () => {
     expect(body.from).toBe("A <a@x.test>");
     const bad = resendTransport("re_test", (async () => new Response("", { status: 422 })) as unknown as typeof fetch);
     await expect(bad.send({ to: "a@x.test", subject: "s", text: "t", from: "x" })).rejects.toThrow("mail_send_failed_422");
+  });
+});
+
+describe("gateway transport", () => {
+  const msg = { to: "a@example.com", subject: "Code", text: "t", html: "<p>h</p>", from: "x@y.z" };
+  const res = (status: number, b: unknown = {}) => new Response(JSON.stringify(b), { status });
+  it("posts to /v1/send with bearer, metadata record, transactional category and no from", async () => {
+    let seen: { url: string; init: RequestInit } | undefined;
+    const t = gatewayTransport("https://gw.example/", "k_test", (async (u: string, init: RequestInit) => { seen = { url: u, init }; return res(200, { ok: true, id: "i1", messageId: "m1" }); }) as unknown as typeof fetch);
+    expect(await t.send(msg)).toMatchObject({ id: "m1", provider: "gateway", accepted: true });
+    expect(seen!.url).toBe("https://gw.example/v1/send");
+    const h = seen!.init.headers as Record<string, string>;
+    expect(h.authorization).toBe("Bearer k_test");
+    expect(h["idempotency-key"]).toMatch(/^iw-/);
+    const b = JSON.parse(String(seen!.init.body));
+    expect(b).toMatchObject({ to: "a@example.com", record: "metadata", category: "transactional" });
+    expect(b.from).toBeUndefined();
+  });
+  it("retries 503 with the same idempotency key; does not retry 401", async () => {
+    const keys: string[] = [];
+    const f = (async (_u: string, init: RequestInit) => { keys.push((init.headers as Record<string, string>)["idempotency-key"]!); return keys.length === 1 ? res(503) : res(200, { id: "i" }); }) as unknown as typeof fetch;
+    await gatewayTransport("https://gw.example", "k", f).send(msg);
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toBe(keys[1]);
+    let n = 0;
+    await expect(gatewayTransport("https://gw.example", "k", (async () => { n++; return res(401); }) as unknown as typeof fetch).send(msg)).rejects.toThrow("mail_send_failed_401");
+    expect(n).toBe(1);
+  });
+  it("transportFromEnv: gateway when URL set; hard error when key missing", async () => {
+    const { transportFromEnv } = await import("@/lib/mail");
+    vi.stubEnv("MAIL_GATEWAY_URL", "https://gw.example");
+    vi.stubEnv("MAIL_GATEWAY_KEY", "");
+    expect(() => transportFromEnv()).toThrow(/mail_gateway_key_missing/);
+    vi.stubEnv("MAIL_GATEWAY_KEY", "k");
+    expect(transportFromEnv().name).toBe("gateway");
+    vi.unstubAllEnvs();
   });
 });

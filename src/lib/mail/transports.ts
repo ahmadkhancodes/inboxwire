@@ -47,6 +47,40 @@ export function resendTransport(apiKey: string, fetchFn: typeof fetch = fetch): 
 }
 
 /**
+ * BufferSol mail gateway (POST {url}/v1/send, Bearer key). The gateway forces this app's own From, so none is sent.
+ * `record: "metadata"` keeps OTP / magic-link bodies out of the gateway log. One idempotency key spans the retry.
+ */
+export function gatewayTransport(url: string, key: string, fetchFn: typeof fetch = fetch): MailTransport {
+  return {
+    name: "gateway",
+    async send(msg): Promise<SendResult> {
+      const idempotencyKey = `iw-${uuidv7()}`;
+      const body = JSON.stringify({
+        to: msg.to, subject: msg.subject, text: msg.text, html: msg.html, replyTo: msg.replyTo,
+        record: "metadata", category: "transactional",
+      });
+      let status = 0;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const res = await fetchFn(`${url.replace(/\/+$/, "")}/v1/send`, {
+          method: "POST",
+          signal: AbortSignal.timeout(10_000),
+          headers: { authorization: `Bearer ${key}`, "content-type": "application/json", "idempotency-key": idempotencyKey },
+          body,
+        });
+        if (res.ok) {
+          const j = (await res.json().catch(() => ({}))) as { id?: string; messageId?: string };
+          return { id: j.messageId ?? j.id ?? uuidv7(), provider: "gateway", accepted: true };
+        }
+        status = res.status;
+        if (status !== 502 && status !== 503) break;
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 300));
+      }
+      throw new Error(`mail_send_failed_${status}`);
+    },
+  };
+}
+
+/**
  * SMTP adapter stub for the VPS (own Postfix/KumoMTA). Implement with nodemailer when the VPS exists;
  * the interface stays the same so no caller changes.
  */

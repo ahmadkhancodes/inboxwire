@@ -24,7 +24,7 @@ services:
       # console prints sign-in links to `docker compose logs app`. Switch to smtp or resend for real mail.
       MAIL_PROVIDER: ${MAIL_PROVIDER:-console}
       MAIL_CONSOLE_PRINT: ${MAIL_CONSOLE_PRINT:-1}
-      MAIL_FROM: ${MAIL_FROM:-Inboxwire <no-reply@localhost>}
+      MAIL_FROM: ${MAIL_FROM:-Inboxwire <no-reply@inboxwire.buffersoltech.com>}
   worker:
     image: ghcr.io/ahmadkhancodes/inboxwire:${INBOXWIRE_VERSION:-latest}
     build: .
